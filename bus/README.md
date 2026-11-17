@@ -10,6 +10,6 @@ La page est publiée séparément à l’adresse `https://adriendoespostrock.git
    - `APP_ACCESS_CODE` : un mot de passe long que tu choisis.
 3. Ouvre la page `/bus/`, touche **Réglages**, saisis l’URL HTTPS du Worker (par exemple `https://nom-du-worker.<compte>.workers.dev`) et le même code d’accès.
 
-La clé PRIM reste dans Cloudflare et n’est jamais envoyée au navigateur. Le code d’accès est conservé en mémoire dans l’onglet; il faudra le ressaisir si tu fermes Safari. Garde-le privé : les personnes qui le possèdent peuvent appeler le proxy.
+La clé PRIM reste dans Cloudflare et n’est jamais envoyée au navigateur. La page n’interroge l’API que lorsque tu touches « Récupérer les horaires »; ouvrir la page ou changer d’arrêt ne lance aucun appel. Dans Réglages, tu peux choisir de mémoriser le code d’accès dans le stockage local de Safari pour le retrouver après actualisation. Garde-le privé : toute personne qui le possède peut appeler le proxy.
 
 Les références utilisées sont configurées dans `worker.js`. L’API IDFM doit être autorisée pour la clé et pour les lignes interrogées.
