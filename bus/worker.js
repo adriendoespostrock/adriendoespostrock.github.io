@@ -23,6 +23,7 @@ const STOPS = {
     }
   }
 };
+let rateLimitedUntil = 0;
 const cors = {
   "Access-Control-Allow-Origin": "https://adriendoespostrock.github.io",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
@@ -39,11 +40,28 @@ export default {async fetch(request,env){
   if(!env.IDFM_API_KEY||!env.APP_ACCESS_CODE)return json({error:"Configure IDFM_API_KEY et APP_ACCESS_CODE comme secrets Cloudflare."},503);
   if(request.headers.get("X-App-Code")!==env.APP_ACCESS_CODE)return json({error:"Code d’accès incorrect."},401);
   const stopKey=url.searchParams.get("stop"),stop=STOPS[stopKey];if(!stop)return json({error:"Arrêt inconnu."},400);
-  const results=await Promise.all(Object.entries(stop.lineRefs).map(async([line,lineRef])=>{try{
-    const api=new URL("https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring");api.searchParams.set("MonitoringRef",stop.monitoringRef);api.searchParams.set("LineRef",lineRef);
-    const res=await fetch(api,{headers:{apikey:env.IDFM_API_KEY,Accept:"application/json"}});if(!res.ok)return[line,{}];
-    const body=await res.json();const next=extract(body).filter(x=>servesDirection(stopKey,line,x.destination)).slice(0,3);
-    return[line,next.length?{minutes:next[0].minutes,realtime:next[0].realtime,destination:next[0].destination,next:next.map(x=>new Intl.DateTimeFormat("fr-FR",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).format(new Date(x.time)))}:{}]
-  }catch{return[line,{}]}}));
-  return json({updated:new Intl.DateTimeFormat("fr-FR",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).format(new Date()),lines:Object.fromEntries(results)});
+  const now=new Date();
+  const timeLabel=new Intl.DateTimeFormat("fr-FR",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).format(now);
+  if(Date.now()<rateLimitedUntil)return json({updated:timeLabel,error:"IDFM limite temporairement les requêtes (429). Réessaie dans environ une minute.",lines:{}});
+  const results=[];
+  let limited=false;
+  for(const [line,lineRef] of Object.entries(stop.lineRefs)){
+    if(limited){results.push([line,{error:"En pause après une limitation temporaire d’IDFM (429)."}]);continue}
+    try{
+      const api=new URL("https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring");api.searchParams.set("MonitoringRef",stop.monitoringRef);api.searchParams.set("LineRef",lineRef);
+      const res=await fetch(api,{headers:{apikey:env.IDFM_API_KEY,Accept:"application/json"}});
+      if(res.status===429){
+        rateLimitedUntil=Date.now()+60_000;
+        limited=true;
+        results.push([line,{error:"IDFM limite temporairement les requêtes (429). Réessaie dans environ une minute."}]);
+      }else if(!res.ok){
+        results.push([line,{error:"Erreur IDFM ("+res.status+")."}]);
+      }else{
+        const body=await res.json();const next=extract(body).filter(x=>servesDirection(stopKey,line,x.destination)).slice(0,3);
+        results.push([line,next.length?{minutes:next[0].minutes,realtime:next[0].realtime,destination:next[0].destination,next:next.map(x=>new Intl.DateTimeFormat("fr-FR",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).format(new Date(x.time)))}:{}]);
+      }
+    }catch{results.push([line,{error:"Impossible de contacter IDFM."}]);}
+    await new Promise(resolve=>setTimeout(resolve,750));
+  }
+  return json({updated:timeLabel,lines:Object.fromEntries(results)});
 }};
