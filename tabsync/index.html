@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TabSync pour DaVinci Resolve</title>
+<style>
+*{box-sizing:border-box} body{margin:0;background:#101318;color:#e8edf4;font:15px system-ui,sans-serif} main{max-width:1260px;margin:auto;padding:28px} h1{margin:0 0 22px;font-size:30px} h2{font-size:16px;margin:0 0 12px} .layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(310px,1fr);gap:18px;align-items:start} section{background:#1a2029;border:1px solid #303947;border-radius:12px;padding:16px;margin-bottom:12px} .stage{background:#080a0e;position:relative;aspect-ratio:16/9;display:grid;place-items:center;overflow:hidden;border-radius:6px} video,canvas{width:100%;height:100%;position:absolute;inset:0;object-fit:contain} canvas{pointer-events:none} label{display:block;margin:8px 0;color:#cad4e1} button,input,select{font:inherit;color:inherit;background:#10151d;border:1px solid #485466;border-radius:6px;padding:6px} input[type=file]{width:100%;max-width:100%} input[type=number]{width:89px} button{cursor:pointer} button.primary{background:#8de7c3;color:#10241f;border:0;font-weight:650;padding:8px 12px} button:disabled{opacity:.45;cursor:default} input[type=range]{width:100%;margin:12px 0} small,p{color:#aebace} p{margin:8px 0;line-height:1.5} .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap} ul{padding-left:20px;margin-bottom:0} li{margin:6px 0} @media(max-width:860px){.layout{grid-template-columns:1fr}main{padding:16px}}
+</style>
+<main>
+<h1>TabSync <small>pour DaVinci Resolve</small></h1>
+<div class="layout">
+<div>
+<section>
+<label>Vidéo locale <input id="videoFile" type="file" accept="video/*,.mov,.mp4"></label>
+<div class="stage" id="stage"><video id="video" playsinline></video><canvas id="preview" width="960" height="540" aria-label="Aperçu de la tablature"></canvas></div>
+<input id="scrub" type="range" min="0" max="0" step="0.001" value="0" aria-label="Position vidéo">
+<div class="row"><button id="play">Lecture / pause</button><button id="back">− 1 image</button><button id="forward">+ 1 image</button><output id="time"></output></div>
+</section>
+<section>
+<h2>Export pour Resolve</h2>
+<div class="row"><label>Cadence <select id="fps"><option>23.976</option><option>24</option><option selected>25</option><option>29.97</option><option>30</option><option>50</option><option>59.94</option><option>60</option></select></label>
+<label>Largeur <input id="width" type="number" min="320" max="7680" value="1920"></label>
+<label>Hauteur <input id="height" type="number" min="180" max="4320" value="1080"></label></div>
+<div class="row"><button class="primary" id="export">Préparer la vidéo transparente</button><button id="cancel" hidden>Annuler</button><a id="download" hidden style="color:#8de7c3">Télécharger le MOV</a></div>
+<p id="exportStatus" role="status">Sélectionnez la cadence du montage, puis préparez la vidéo transparente. La séquence commence à la première image de la vidéo.</p>
+</section>
+</div>
+<div>
+<section>
+<h2>Tablature</h2>
+<label>Fichier Guitar Pro <input id="gpFile" type="file" accept=".gp,.gp3,.gp4,.gp5,.gpx"></label>
+<label id="trackLabel" hidden>Piste <select id="track"></select></label>
+<p id="importStatus" role="status"></p>
+<p id="tabStatus" role="status"></p>
+</section>
+<section>
+<h2>Synchronisation</h2>
+<p>Placez la tête de lecture sur le premier temps d’une mesure jouée, choisissez son numéro, puis posez le repère.</p>
+<div class="row"><label>Passage <select id="measure"></select></label><button id="anchor">Poser le repère</button><button id="endAnchor">Marquer la fin</button></div>
+<details><summary>Personnaliser l’ordre des mesures</summary>
+<label>Ordre joué <input id="order" type="text" placeholder="1-4, 1-4, 5-8"></label>
+<button id="applyOrder">Appliquer l’ordre</button>
+<small>Laissez vide pour rétablir l’ordre automatique.</small><p id="orderStatus" role="status"></p></details>
+<ul id="anchors"></ul>
+<p id="syncStatus" role="status"></p>
+</section>
+</div>
+</div>
+</main>
+<script>
+'use strict';
+const el = id => document.getElementById(id);
+const video = el('video');
+const preview = el('preview');
+let bars = [], anchors = [], total = 0, score, videoUrl, exportJob;
+let writtenBars = [], automaticOrder = [];
+const formatTime = seconds => {
+  const ms = Math.round(seconds * 1000);
+  return [Math.floor(ms / 60000), Math.floor(ms / 1000) % 60].map(n => String(n).padStart(2,'0')).join(':') +
+    '.' + String(ms % 1000).padStart(3,'0');
+};
+const fps = () => ({'23.976':24000/1001,'29.97':30000/1001,'59.94':60000/1001})[el('fps').value] || Number(el('fps').value);
+function guitarBars(staff) {
+  let start = 0;
+  let bpm = score.tempo || 120;
+  return staff.bars.map((bar,index) => {
+    const master = score.masterBars[index];
+    const ticks = master.calculateDuration();
+    if (!(ticks > 0)) throw Error('Une mesure a une durée invalide.');
+    const changes = (master.tempoAutomations || []).filter(a => a.value > 0 && a.ratioPosition >= 0 && a.ratioPosition <= 1)
+      .sort((a,b) => a.ratioPosition-b.ratioPosition);
+    const segments = [{at:0,seconds:0,bpm}];
+    for (const change of changes) {
+      const last = segments[segments.length-1];
+      const at = change.ratioPosition;
+      segments.push({at,seconds:last.seconds+(at-last.at)*ticks/960*60/last.bpm,bpm:change.value});
+      bpm = change.value;
+    }
+    function timeAt(ratio) {
+      const segment = segments.findLast(s => s.at <= ratio);
+      return segment.seconds + (ratio-segment.at)*ticks/960*60/segment.bpm;
+    }
+    const duration = timeAt(1);
+    const notes = [], rhythm = [];
+    const groupTicks = 960*4/(master.timeSignatureDenominator || 4) *
+      (master.timeSignatureDenominator===8 && master.timeSignatureNumerator>3 &&
+        master.timeSignatureNumerator%3===0 ? 3 : 1);
+    bar.voices.forEach((voice,voiceIndex) => {
+      for (const beat of voice.beats) {
+        if (beat.isEmpty) continue;
+        const ratio = Math.max(0,Math.min(1,beat.playbackStart/ticks));
+        const position = timeAt(ratio)/duration;
+        for (const note of beat.notes) {
+          if (note.string>=1 && note.string<=6) {
+            const fret = note.isDead ? 'x' : note.isTieDestination ? '('+note.fret+')' : note.fret;
+            notes.push({string:6-note.string,fret,position});
+          }
+        }
+        if (beat.duration) rhythm.push({position,duration:beat.duration,dots:beat.dots || 0,
+          group:Math.floor(Math.max(0,beat.displayStart ?? beat.playbackStart)/groupTicks),
+          voice:voiceIndex,rest:beat.notes.length===0});
+      }
+    });
+    const result = {start,duration,notes,rhythm};
+    start += duration;
+    return result;
+  });
+}
+function repeatOrder(masterBars) {
+  const stack = [];
+  const startsByClosing = new Map();
+  for (const [index, bar] of masterBars.entries()) {
+    if (bar.isRepeatStart) stack.push(index);
+    if (bar.repeatCount > 1) {
+      startsByClosing.set(index, stack.pop() ?? 0);
+    }
+  }
+  const visits = new Map();
+  const order = [];
+  let pass = 0;
+  for (let index=0, steps=0; index<masterBars.length; steps++) {
+    if (steps>=100000) throw Error('Ordre de reprise trop long. Indiquez l’ordre joué manuellement.');
+    const bar = masterBars[index];
+    const mask = bar.alternateEndings || 0;
+    if (!mask || (pass<32 && (mask & (1 << pass)))) order.push(index);
+    if (bar.repeatCount > 1) {
+      const start = bar.repeatGroup?.openings?.[0]?.index ??
+        startsByClosing.get(index);
+      const completed = visits.get(index) || 0;
+      if (completed < bar.repeatCount-1) {
+        visits.set(index, completed+1);
+        for (const closing of visits.keys()) if (closing>=start && closing<index) visits.delete(closing);
+        pass = completed+1;
+        index = start;
+        continue;
+      }
+    }
+    index++;
+  }
+  return order;
+}
+function parseOrder(value, count) {
+  const order = [];
+  for (const token of value.split(',')) {
+    const match = token.trim().match(/^(\d+)(?:\s*[-–]\s*(\d+))?$/);
+    if (!match) throw Error('Utilisez des numéros et des plages séparés par des virgules.');
+    const start = Number(match[1]), end = Number(match[2] ?? match[1]);
+    if (start<1 || end<start || end>count) throw Error('Indiquez des mesures de 1 à '+count+'.');
+    for (let measure=start; measure<=end; measure++) {
+      if (order.length>=100000) throw Error('Ordre trop long.');
+      order.push(measure-1);
+    }
+  }
+  return order;
+}
+function playbackBars(measures, order) {
+  let start = 0;
+  const occurrences = new Map();
+  for (const index of order) occurrences.set(index,(occurrences.get(index) || 0)+1);
+  const passages = new Map();
+  return order.map(index => {
+    const bar = measures[index];
+    const passage = (passages.get(index) || 0)+1;
+    passages.set(index,passage);
+    const label = 'Mesure '+(index+1) + (occurrences.get(index)>1 ? ' · passage '+passage : '');
+    const next = {...bar,start,label,index};
+    start += bar.duration;
+    return next;
+  });
+}
+function setBars(next, order, preserve = false) {
+  if (!next.length) throw Error('Aucune mesure trouvée.');
+  const custom = preserve && el('order').value.trim();
+  const nextOrder = order?.length ? order : next.map((_,index) => index);
+  const played = playbackBars(next, custom ? parseOrder(custom,next.length) : nextOrder);
+  writtenBars = next;
+  automaticOrder = nextOrder;
+  if (!preserve) el('order').value = '';
+  setPlayback(played, preserve);
+}
+function setPlayback(next, preserve) {
+  const selected = Number(el('measure').value) || 0;
+  if (!preserve || next.length!==bars.length || next.some((bar,index) => bar.index!==bars[index].index)) anchors = [];
+  bars = next;
+  total = next.at(-1).start + next.at(-1).duration;
+  const options = document.createDocumentFragment();
+  next.forEach((bar,index) => options.append(new Option(bar.label,index)));
+  el('measure').replaceChildren(options);
+  el('measure').value = Math.min(next.length-1,selected);
+  el('tabStatus').textContent = writtenBars.length + ' mesure(s) · ' + bars.length + ' dans l’ordre joué · ' + formatTime(total);
+  el('orderStatus').textContent = '';
+  showAnchors();
+}
+el('applyOrder').onclick = () => {
+  try {
+    const value = el('order').value.trim();
+    const order = value ? parseOrder(value,writtenBars.length) : automaticOrder;
+    setPlayback(playbackBars(writtenBars,order),true);
+  } catch (error) { el('orderStatus').textContent = error.message; }
+};
+let alphaLoading;
+function alphaTabLibrary() {
+  if (window.alphaTab) return Promise.resolve(window.alphaTab);
+  alphaLoading ||= new Promise((resolve,reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@coderline/alphatab@1.6.2/dist/alphaTab.js';
+    script.onload = () => window.alphaTab ? resolve(window.alphaTab) : reject(Error('Bibliothèque Guitar Pro indisponible.'));
+    script.onerror = () => { script.remove(); reject(Error('Connexion nécessaire pour charger le lecteur Guitar Pro.')); };
+    document.head.append(script);
+  }).catch(error => { alphaLoading = undefined; throw error; });
+  return alphaLoading;
+}
+let staves = [];
+function chooseTrack() {
+  try { setBars(guitarBars(staves[Number(el('track').value)].staff), repeatOrder(score.masterBars), true); }
+  catch (error) { el('importStatus').textContent = error.message; }
+}
+el('gpFile').onchange = async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  el('gpFile').disabled = true;
+  el('importStatus').textContent = 'Lecture du fichier…';
+  try {
+    const library = await alphaTabLibrary();
+    score = library.importer.ScoreLoader.loadScoreFromBytes(new Uint8Array(await file.arrayBuffer()));
+    staves = score.tracks.flatMap(track => track.staves.filter(staff => staff.tuning.length === 6)
+      .map((staff,index) => ({staff,name:track.name + (index ? ' · portée '+(index+1) : '')})));
+    if (!staves.length) throw Error('Le fichier ne contient aucune piste à six cordes.');
+    setBars(guitarBars(staves[0].staff), repeatOrder(score.masterBars));
+    el('track').replaceChildren(...staves.map(({name},index) => new Option(name || 'Piste '+(index+1),index)));
+    el('trackLabel').hidden = false;
+    el('importStatus').textContent = file.name;
+  } catch (error) {
+    el('trackLabel').hidden = true;
+    el('importStatus').textContent = error.message || 'Impossible de lire le fichier Guitar Pro.';
+  } finally { el('gpFile').disabled = false; el('gpFile').value = ''; }
+};
+function scoreTime(time, points, measures, duration) {
+  if (!points.length) return time;
+  const at = point => point.index === measures.length ? duration : measures[point.index].start;
+  if (points.length===1) return time - points[0].time + at(points[0]);
+  let index = points.findIndex(point => point.time > time);
+  if (index < 0) index = points.length-1;
+  index = Math.max(1,index);
+  const left = points[index-1], right = points[index];
+  return at(left) + (time-left.time)/(right.time-left.time)*(at(right)-at(left));
+}
+function addAnchor(index) {
+  if (!Number.isFinite(video.duration)) { el('syncStatus').textContent = 'Chargez d’abord une vidéo.'; return; }
+  const time = video.currentTime;
+  const next = [...anchors.filter(point => point.index !== index),{index,time}].sort((a,b) => a.index-b.index);
+  if (next.some((point,i) => i && point.time <= next[i-1].time)) {
+    el('syncStatus').textContent = 'Les repères doivent suivre l’ordre des mesures et avoir des positions distinctes.';
+    return;
+  }
+  anchors = next;
+  if (index+1 < bars.length) el('measure').value = index+1;
+  showAnchors();
+}
+function showAnchors() {
+  for (const id of ["measure","anchor","endAnchor","order","applyOrder"]) el(id).disabled = !bars.length;
+  el('anchors').replaceChildren(...anchors.map(point => {
+    const row = document.createElement('li');
+    row.textContent = (point.index===bars.length ? 'Fin' : bars[point.index].label) + ' · ' + formatTime(point.time) + ' ';
+    const remove = document.createElement('button');
+    remove.textContent = 'Supprimer';
+    remove.onclick = () => { anchors = anchors.filter(candidate => candidate!==point); showAnchors(); };
+    row.append(remove);
+    return row;
+  }));
+  el('syncStatus').textContent = !bars.length ? "Importez une tablature Guitar Pro pour poser des repères." : anchors.length ? "" : "Sans repère, la tablature démarre à 00:00.";
+  refresh();
+}
+function beamCount(duration) {
+  return Math.max(0,Math.floor(Math.log2(Math.max(4,duration)))-2);
+}
+function rhythmGroups(rhythm) {
+  const groups = [];
+  for (const event of rhythm) {
+    const previous = groups.at(-1);
+    const last = previous?.at(-1);
+    if (last && !last.rest && !event.rest && last.voice===event.voice && last.group===event.group &&
+        beamCount(last.duration) && beamCount(event.duration)) previous.push(event);
+    else groups.push([event]);
+  }
+  return groups;
+}
+function drawRhythm(ctx,bar,x,h) {
+  const baseline = h*.922;
+  const spacing = h*.007;
+  ctx.strokeStyle='#dbe5ef';
+  ctx.fillStyle='#dbe5ef';
+  ctx.lineWidth=Math.max(1,h*.0014);
+  const stroke = (x1,y1,x2,y2) => {
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  };
+  for (const group of rhythmGroups(bar.rhythm)) {
+    const levels = group.map(event => beamCount(event.duration));
+    group.forEach((event,index) => {
+      const left = x(event.position);
+      if (event.rest) return;
+      if (event.duration>1) {
+        const half = event.duration===2;
+        stroke(left,h*.865,left,half ? h*.915 : baseline);
+        if (half) {
+          stroke(left-h*.004,h*.915,left+h*.004,h*.915);
+        }
+      }
+      for (let dot=0;dot<event.dots;dot++) {
+        ctx.beginPath();ctx.arc(left+h*(.011+.006*dot),h*.881,h*.00165,0,Math.PI*2);ctx.fill();
+      }
+      for (let level=0;level<levels[index];level++) {
+        const y = baseline-level*spacing;
+        if ((levels[index+1] || 0)>level) {
+          ctx.fillRect(left,y,x(group[index+1].position)-left,h*.0025);
+        } else if ((levels[index-1] || 0)<=level) {
+          if (group.length===1) {
+            ctx.beginPath();
+            ctx.moveTo(left,y);ctx.quadraticCurveTo(left+h*.010,y-h*.004,left+h*.012,y-h*.012);
+            ctx.stroke();
+          } else {
+            const neighbor = group[index+1] ?? group[index-1];
+            const hook = Math.sign(neighbor.position-event.position) *
+              Math.min(h*.012,Math.abs(x(neighbor.position)-left)*.45);
+            ctx.fillRect(Math.min(left,left+hook),y,Math.abs(hook),h*.0025);
+          }
+        }
+      }
+    });
+  }
+}
+function draw(canvas,time,measures,points,duration) {
+  const ctx = canvas.getContext('2d');
+  const w=canvas.width,h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const position = scoreTime(time,points,measures,duration);
+  if (position < 0 || position >= duration) return;
+  const index = measures.findLastIndex(bar => bar.start <= position);
+  if (index < 0) return;
+  const bar = measures[index];
+  const top = h*.667, left=w*.042, right=w*.958, lineStart=w*.098, lineEnd=w*.929;
+  const y = string => h*(.744 + string*.021);
+  const x = fraction => lineStart+w*.010+fraction*(lineEnd-lineStart-w*.022);
+  ctx.fillStyle='rgba(12,17,25,.9)';
+  ctx.beginPath(); ctx.roundRect(left,top,right-left,h*.291,h*.019); ctx.fill();
+  ctx.fillStyle='#a6b5c8'; ctx.font='600 '+h*.021+'px system-ui';
+  ctx.fillText(String(bar.index+1),w*.062,h*.712);
+  ctx.strokeStyle='#596778'; ctx.lineWidth=Math.max(1,h*.00125);
+  ctx.beginPath();
+  for(let string=0;string<6;string++){ctx.moveTo(lineStart,y(string));ctx.lineTo(lineEnd,y(string));}
+  ctx.moveTo(lineStart,y(0));ctx.lineTo(lineStart,y(5));
+  ctx.moveTo(lineEnd,y(0));ctx.lineTo(lineEnd,y(5));
+  ctx.stroke();
+  drawRhythm(ctx,bar,x,h);
+  const cursor = x((position-bar.start)/bar.duration);
+  ctx.strokeStyle='#8de7c3'; ctx.lineWidth=Math.max(2,h*.002);
+  ctx.beginPath();ctx.moveTo(cursor,h*.727);ctx.lineTo(cursor,h*.934);ctx.stroke();
+  ctx.font='bold '+h*.021+'px monospace'; ctx.textAlign='center';ctx.textBaseline='middle';
+  for (const note of bar.notes) {
+    const label=String(note.fret), center=x(note.position), baseline=y(note.string);
+    const size=ctx.measureText(label).width+h*.01;
+    ctx.fillStyle='#161e29';ctx.fillRect(center-size/2,baseline-h*.011,size,h*.022);
+    ctx.fillStyle='#f1f6ff';ctx.fillText(label,center,baseline);
+  }
+  ctx.textAlign='start';ctx.textBaseline='alphabetic';
+}
+function refresh() {
+  const time = video.currentTime || 0;
+  el('scrub').value = time;
+  el('time').textContent = formatTime(time);
+  draw(preview,time,bars,anchors,total);
+}
+function refreshDimensions() {
+  const width = Number(el('width').value), height = Number(el('height').value);
+  if (width>0 && height>0 && el('width').checkValidity() && el('height').checkValidity()) {
+    preview.height = Math.max(1,Math.round(960*height/width));
+    el('stage').style.aspectRatio = width+'/'+height;
+  }
+  refresh();
+}
+el('videoFile').onchange = event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (videoUrl) URL.revokeObjectURL(videoUrl);
+  videoUrl = URL.createObjectURL(file);
+  anchors = [];
+  video.src = videoUrl;
+  showAnchors();
+};
+video.onloadedmetadata = () => { el('scrub').max = video.duration; refresh(); };
+video.onerror = () => { el('syncStatus').textContent = 'Vidéo illisible dans le navigateur. Essayez un MP4 H.264.'; };
+video.ontimeupdate = video.onseeked = refresh;
+function updatePlaying() { if (!video.paused) { refresh(); requestAnimationFrame(updatePlaying); } }
+video.onplay = updatePlaying;
+el('scrub').oninput = () => { if (Number.isFinite(video.duration)) { video.currentTime=Number(el('scrub').value); refresh(); } };
+el('play').onclick = () => {
+  if (!video.src) return;
+  if (video.paused) video.play().catch(error => { el('syncStatus').textContent = error.message; });
+  else video.pause();
+};
+function step(direction) { if (Number.isFinite(video.duration)) {video.pause();video.currentTime=Math.max(0, Math.min(video.duration, video.currentTime+direction/fps()));} }
+el('back').onclick = () => step(-1);
+el('forward').onclick = () => step(1);
+el('track').onchange = chooseTrack;
+el('width').oninput = el('height').oninput = refreshDimensions;
+el('anchor').onclick = () => {
+  const index = Number(el('measure').value);
+  if (!Number.isInteger(index) || index<0 || index>=bars.length) {el('syncStatus').textContent='Numéro de mesure invalide.';return;}
+  addAnchor(index);
+};
+el('endAnchor').onclick = () => { if (bars.length) addAnchor(bars.length); };
+el('cancel').onclick = () => { if (exportJob) exportJob.cancelled = true; };
+function binaryNumber(value, width) {
+  const bytes = new Uint8Array(width);
+  for (let index=width-1;index>=0;index--) {
+    bytes[index]=value&255;
+    value=Math.floor(value/256);
+  }
+  return bytes;
+}
+const u16 = value => binaryNumber(value,2);
+const u32 = value => binaryNumber(value,4);
+const ascii = value => new TextEncoder().encode(value);
+const zero = length => new Uint8Array(length);
+function movieAtom(type,...parts) {
+  const size = 8+parts.reduce((sum,part) => sum+(part.size ?? part.byteLength),0);
+  return new Blob([u32(size),ascii(type),...parts]);
+}
+function quickTimePng(width,height,timescale,ticks,frames) {
+  const duration = frames.length*ticks;
+  const matrix = [65536,0,0,0,65536,0,0,0,1073741824].map(u32);
+  const ftyp = movieAtom('ftyp',ascii('qt  '),u32(0),ascii('qt  '));
+  const offsets = [];
+  let offset = ftyp.size+8;
+  for (const frame of frames) {
+    offsets.push(u32(offset));
+    offset += frame.size;
+  }
+  const mvhd = movieAtom('mvhd',zero(12),u32(timescale),u32(duration),u32(65536),
+    u16(256),zero(10),...matrix,zero(24),u32(2));
+  const tkhd = movieAtom('tkhd',u32(7),zero(8),u32(1),zero(4),u32(duration),
+    zero(16),...matrix,u32(width*65536),u32(height*65536));
+  const mdhd = movieAtom('mdhd',zero(12),u32(timescale),u32(duration),zero(4));
+  const handler = (component,type) => movieAtom('hdlr',zero(4),ascii(component),ascii(type),zero(13));
+  const vmhd = movieAtom('vmhd',u32(1),zero(8));
+  const dref = movieAtom('dref',zero(4),u32(1),movieAtom('url ',u32(1)));
+  const description = movieAtom('png ',zero(6),u16(1),zero(16),u16(width),u16(height),
+    u32(72*65536),u32(72*65536),zero(4),u16(1),Uint8Array.of(3),ascii('PNG'),zero(28),
+    u16(32),u16(65535));
+  const sizes = new Blob(frames.map(frame => u32(frame.size)));
+  const stbl = movieAtom('stbl',
+    movieAtom('stsd',zero(4),u32(1),description),
+    movieAtom('stts',zero(4),u32(1),u32(frames.length),u32(ticks)),
+    movieAtom('stsc',zero(4),u32(1),u32(1),u32(1),u32(1)),
+    movieAtom('stsz',zero(8),u32(frames.length),sizes),
+    movieAtom('stco',zero(4),u32(frames.length),new Blob(offsets)));
+  const minf = movieAtom('minf',vmhd,handler('dhlr','alis'),movieAtom('dinf',dref),stbl);
+  const mdia = movieAtom('mdia',mdhd,handler('mhlr','vide'),minf);
+  const moov = movieAtom('moov',mvhd,movieAtom('trak',tkhd,mdia));
+  return new Blob([ftyp,movieAtom('mdat',new Blob(frames)),moov],{type:'video/quicktime'});
+}
+let downloadUrl;
+el('export').onclick = async () => {
+  const status = el('exportStatus');
+  const download = el('download');
+  if (!Number.isFinite(video.duration) || !bars.length) {status.textContent='Chargez une vidéo et une tablature.';return;}
+  if (!['width','height'].every(id => el(id).value && el(id).checkValidity())) {status.textContent='Dimensions invalides.';return;}
+  const rate=fps(), count=Math.ceil(video.duration*rate), measures=bars, points=anchors, duration=total;
+  if (count<1) {status.textContent='La vidéo doit contenir au moins une image.';return;}
+  const canvas=document.createElement('canvas');
+  canvas.width=Number(el('width').value);canvas.height=Number(el('height').value);
+  el('export').disabled = true;
+  download.hidden = true;
+  download.removeAttribute('href');
+  if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+  downloadUrl = undefined;
+  const frames = [];
+  let bytes = 0;
+  const ticks = el('fps').value.includes('.') ? 1001 : 1;
+  const timescale = Math.round(rate*ticks);
+  if (count*ticks >= 2**32) {status.textContent='Vidéo trop longue pour cet export.';el('export').disabled=false;return;}
+  exportJob={cancelled:false};
+  el('cancel').hidden=false;
+  status.textContent='Préparation de '+count+' images…';
+  try {
+    for (let index=0;index<count;index++) {
+      if (exportJob.cancelled) {status.textContent='Export annulé.';return;}
+      draw(canvas,index/rate,measures,points,duration);
+      const blob = await new Promise((resolve,reject) => canvas.toBlob(value => value ? resolve(value) : reject(Error('Échec de l’encodage PNG.')), 'image/png'));
+      bytes += blob.size;
+      if (bytes > 1024**3) throw Error('Vidéo supérieure à 1 Go. Réduisez la résolution ou exportez un extrait plus court.');
+      frames.push(blob);
+      if (index%10===0 || index+1===count) status.textContent=(index+1)+' / '+count+' images';
+    }
+    if (exportJob.cancelled) {status.textContent='Export annulé.';return;}
+    downloadUrl=URL.createObjectURL(quickTimePng(canvas.width,canvas.height,timescale,ticks,frames));
+    download.href=downloadUrl;
+    download.download='TabSync_'+new Date().toISOString().replace(/[:.]/g,'-')+'.mov';
+    download.hidden=false;
+    status.textContent= 'Vidéo prête. Importez le MOV dans Resolve et placez-le au-dessus de votre vidéo.';
+  } catch (error) {
+    status.textContent=error.message || 'Export impossible.';
+  } finally { exportJob=undefined; el('cancel').hidden=true; el('export').disabled=false; }
+};
+showAnchors();
+</script>
+</html>
