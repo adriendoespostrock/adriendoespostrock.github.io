@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>TabSync pour DaVinci Resolve</title>
 <style>
-*{box-sizing:border-box} body{margin:0;background:#101318;color:#e8edf4;font:15px system-ui,sans-serif} main{max-width:1260px;margin:auto;padding:28px} h1{margin:0 0 22px;font-size:30px} h2{font-size:16px;margin:0 0 12px} .layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(310px,1fr);gap:18px;align-items:start} section{background:#1a2029;border:1px solid #303947;border-radius:12px;padding:16px;margin-bottom:12px} .stage{background:#080a0e;position:relative;aspect-ratio:16/9;display:grid;place-items:center;overflow:hidden;border-radius:6px} video,canvas{width:100%;height:100%;position:absolute;inset:0;object-fit:contain} canvas{pointer-events:none} label{display:block;margin:8px 0;color:#cad4e1} button,input,select{font:inherit;color:inherit;background:#10151d;border:1px solid #485466;border-radius:6px;padding:6px} input[type=file]{width:100%;max-width:100%} input[type=number]{width:89px} button{cursor:pointer} button.primary{background:#8de7c3;color:#10241f;border:0;font-weight:650;padding:8px 12px} button:disabled{opacity:.45;cursor:default} input[type=range]{width:100%;margin:12px 0} small,p{color:#aebace} p{margin:8px 0;line-height:1.5} .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap} ul{padding-left:20px;margin-bottom:0} li{margin:6px 0} @media(max-width:860px){.layout{grid-template-columns:1fr}main{padding:16px}}
+*{box-sizing:border-box} body{margin:0;background:#101318;color:#e8edf4;font:15px system-ui,sans-serif} main{max-width:1260px;margin:auto;padding:28px} h1{margin:0 0 22px;font-size:30px} h2{font-size:16px;margin:0 0 12px} .layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(310px,1fr);gap:18px;align-items:start} section{background:#1a2029;border:1px solid #303947;border-radius:12px;padding:16px;margin-bottom:12px} .stage{background:#080a0e;position:relative;aspect-ratio:16/9;display:grid;place-items:center;overflow:hidden;border-radius:6px} video,canvas{width:100%;height:100%;position:absolute;inset:0;object-fit:contain} canvas{pointer-events:none} label{display:block;margin:8px 0;color:#cad4e1} label[hidden]{display:none} button,input,select{font:inherit;color:inherit;background:#10151d;border:1px solid #485466;border-radius:6px;padding:6px} input[type=file]{width:100%;max-width:100%} input[type=number]{width:89px} button{cursor:pointer} button.primary{background:#8de7c3;color:#10241f;border:0;font-weight:650;padding:8px 12px} button:disabled{opacity:.45;cursor:default} input[type=range]{width:100%;margin:12px 0} small,p{color:#aebace} p{margin:8px 0;line-height:1.5} .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap} ul{padding-left:20px;margin-bottom:0} li{margin:6px 0} @media(max-width:860px){.layout{grid-template-columns:1fr}main{padding:16px}}
 </style>
 <main>
 <h1>TabSync <small>pour DaVinci Resolve</small></h1>
@@ -30,7 +30,9 @@
 <section>
 <h2>Tablature</h2>
 <label>Fichier Guitar Pro <input id="gpFile" type="file" accept=".gp,.gp3,.gp4,.gp5,.gpx"></label>
-<label id="trackLabel" hidden>Piste <select id="track"></select></label>
+<label hidden>Piste 1 <select id="track"></select></label>
+<label hidden>Piste 2 <select id="track2"></select></label>
+<label hidden>Piste 3 <select id="track3"></select></label>
 <p id="importStatus" role="status"></p>
 <p id="tabStatus" role="status"></p>
 </section>
@@ -61,7 +63,7 @@ const formatTime = seconds => {
     '.' + String(ms % 1000).padStart(3,'0');
 };
 const fps = () => ({'23.976':24000/1001,'29.97':30000/1001,'59.94':60000/1001})[el('fps').value] || Number(el('fps').value);
-function guitarBars(staff) {
+function guitarBars(staff, score) {
   let start = 0;
   let bpm = score.tempo || 120;
   return staff.bars.map((bar,index) => {
@@ -169,15 +171,14 @@ function playbackBars(measures, order) {
     return next;
   });
 }
-function setBars(next, order, preserve = false) {
+function setBars(next, order) {
   if (!next.length) throw Error('Aucune mesure trouvée.');
-  const custom = preserve && el('order').value.trim();
   const nextOrder = order?.length ? order : next.map((_,index) => index);
-  const played = playbackBars(next, custom ? parseOrder(custom,next.length) : nextOrder);
+  const played = playbackBars(next,nextOrder);
   writtenBars = next;
   automaticOrder = nextOrder;
-  if (!preserve) el('order').value = '';
-  setPlayback(played, preserve);
+  el('order').value = '';
+  setPlayback(played,false);
 }
 function setPlayback(next, preserve) {
   const selected = Number(el('measure').value) || 0;
@@ -212,9 +213,40 @@ function alphaTabLibrary() {
   return alphaLoading;
 }
 let staves = [];
+const trackFields = ['track','track2','track3'].map(el);
+let activeTracks = [0,'',''];
+function selectedBars(guitarScore, tracks, selection) {
+  const parts = selection.filter(index => index !== '').map(index => {
+    const {staff,name} = tracks[Number(index)];
+    return {name,measures:guitarBars(staff,guitarScore)};
+  });
+  return parts[0].measures.map((measure,index) => ({
+    start:measure.start,duration:measure.duration,
+    lanes:parts.map(({name,measures}) => ({
+      name,notes:measures[index]?.notes ?? [],rhythm:measures[index]?.rhythm ?? []
+    }))
+  }));
+}
+function updateTrackFields() {
+  trackFields.forEach((field,slot) => {
+    field.value = activeTracks[slot];
+    field.closest('label').hidden = slot >= staves.length;
+    for (const option of field.options) {
+      option.disabled = option.value !== '' && activeTracks.some((index,other) =>
+        other !== slot && index !== '' && String(index) === option.value);
+    }
+  });
+}
 function chooseTrack() {
-  try { setBars(guitarBars(staves[Number(el('track').value)].staff), repeatOrder(score.masterBars), true); }
-  catch (error) { el('importStatus').textContent = error.message; }
+  try {
+    const selection = trackFields.map(field => field.value);
+    const next = selectedBars(score,staves,selection);
+    const played = playbackBars(next,bars.map(bar => bar.index));
+    writtenBars = next;
+    setPlayback(played,true);
+    activeTracks = selection;
+  } catch (error) { el('importStatus').textContent = error.message; }
+  updateTrackFields();
 }
 el('gpFile').onchange = async event => {
   const file = event.target.files[0];
@@ -223,16 +255,23 @@ el('gpFile').onchange = async event => {
   el('importStatus').textContent = 'Lecture du fichier…';
   try {
     const library = await alphaTabLibrary();
-    score = library.importer.ScoreLoader.loadScoreFromBytes(new Uint8Array(await file.arrayBuffer()));
-    staves = score.tracks.flatMap(track => track.staves.filter(staff => staff.tuning.length === 6)
-      .map((staff,index) => ({staff,name:track.name + (index ? ' · portée '+(index+1) : '')})));
-    if (!staves.length) throw Error('Le fichier ne contient aucune piste à six cordes.');
-    setBars(guitarBars(staves[0].staff), repeatOrder(score.masterBars));
-    el('track').replaceChildren(...staves.map(({name},index) => new Option(name || 'Piste '+(index+1),index)));
-    el('trackLabel').hidden = false;
+    const nextScore = library.importer.ScoreLoader.loadScoreFromBytes(new Uint8Array(await file.arrayBuffer()));
+    const nextStaves = nextScore.tracks.flatMap(track => track.staves.filter(staff => staff.tuning.length === 6)
+      .map((staff,index) => ({staff,name:(track.name || 'Guitare') + (index ? ' · portée '+(index+1) : '')})));
+    if (!nextStaves.length) throw Error('Le fichier ne contient aucune piste à six cordes.');
+    const selection = [0,'',''];
+    setBars(selectedBars(nextScore,nextStaves,selection),repeatOrder(nextScore.masterBars));
+    score = nextScore;
+    staves = nextStaves;
+    activeTracks = selection;
+    trackFields.forEach((field,slot) => {
+      const options = staves.map(({name},index) => new Option(name,index));
+      if (slot) options.unshift(new Option('Masquée',''));
+      field.replaceChildren(...options);
+    });
+    updateTrackFields();
     el('importStatus').textContent = file.name;
   } catch (error) {
-    el('trackLabel').hidden = true;
     el('importStatus').textContent = error.message || 'Impossible de lire le fichier Guitar Pro.';
   } finally { el('gpFile').disabled = false; el('gpFile').value = ''; }
 };
@@ -339,6 +378,17 @@ function draw(canvas,time,measures,points,duration) {
   const index = measures.findLastIndex(bar => bar.start <= position);
   if (index < 0) return;
   const bar = measures[index];
+  const count = bar.lanes.length;
+  const scale = count===1 ? 1 : count===2 ? .78 : .65;
+  bar.lanes.forEach((lane,slot) => {
+    ctx.save();
+    ctx.translate(0,h*(.958*(1-scale)-(count-1-slot)*(.291*scale+.008)));
+    ctx.scale(1,scale);
+    drawLane(ctx,lane,bar,(position-bar.start)/bar.duration,w,h,count>1);
+    ctx.restore();
+  });
+}
+function drawLane(ctx,lane,bar,progress,w,h,multiple) {
   const top = h*.667, left=w*.042, right=w*.958, lineStart=w*.098, lineEnd=w*.929;
   const y = string => h*(.744 + string*.021);
   const x = fraction => lineStart+w*.010+fraction*(lineEnd-lineStart-w*.022);
@@ -346,18 +396,19 @@ function draw(canvas,time,measures,points,duration) {
   ctx.beginPath(); ctx.roundRect(left,top,right-left,h*.291,h*.019); ctx.fill();
   ctx.fillStyle='#a6b5c8'; ctx.font='600 '+h*.021+'px system-ui';
   ctx.fillText(String(bar.index+1),w*.062,h*.712);
+  if (multiple) ctx.fillText(lane.name,w*.108,h*.712,w*.8);
   ctx.strokeStyle='#596778'; ctx.lineWidth=Math.max(1,h*.00125);
   ctx.beginPath();
   for(let string=0;string<6;string++){ctx.moveTo(lineStart,y(string));ctx.lineTo(lineEnd,y(string));}
   ctx.moveTo(lineStart,y(0));ctx.lineTo(lineStart,y(5));
   ctx.moveTo(lineEnd,y(0));ctx.lineTo(lineEnd,y(5));
   ctx.stroke();
-  drawRhythm(ctx,bar,x,h);
-  const cursor = x((position-bar.start)/bar.duration);
+  drawRhythm(ctx,lane,x,h);
+  const cursor = x(progress);
   ctx.strokeStyle='#8de7c3'; ctx.lineWidth=Math.max(2,h*.002);
   ctx.beginPath();ctx.moveTo(cursor,h*.727);ctx.lineTo(cursor,h*.934);ctx.stroke();
   ctx.font='bold '+h*.021+'px monospace'; ctx.textAlign='center';ctx.textBaseline='middle';
-  for (const note of bar.notes) {
+  for (const note of lane.notes) {
     const label=String(note.fret), center=x(note.position), baseline=y(note.string);
     const size=ctx.measureText(label).width+h*.01;
     ctx.fillStyle='#161e29';ctx.fillRect(center-size/2,baseline-h*.011,size,h*.022);
@@ -402,7 +453,7 @@ el('play').onclick = () => {
 function step(direction) { if (Number.isFinite(video.duration)) {video.pause();video.currentTime=Math.max(0, Math.min(video.duration, video.currentTime+direction/fps()));} }
 el('back').onclick = () => step(-1);
 el('forward').onclick = () => step(1);
-el('track').onchange = chooseTrack;
+trackFields.forEach(field => { field.onchange = chooseTrack; });
 el('width').oninput = el('height').oninput = refreshDimensions;
 el('anchor').onclick = () => {
   const index = Number(el('measure').value);
