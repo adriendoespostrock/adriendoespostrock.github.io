@@ -64,6 +64,7 @@ const formatTime = seconds => {
 };
 const fps = () => ({'23.976':24000/1001,'29.97':30000/1001,'59.94':60000/1001})[el('fps').value] || Number(el('fps').value);
 function guitarBars(staff, score) {
+  const stringCount = staff.tuning.length;
   let start = 0;
   let bpm = score.tempo || 120;
   return staff.bars.map((bar,index) => {
@@ -94,9 +95,9 @@ function guitarBars(staff, score) {
         const ratio = Math.max(0,Math.min(1,beat.playbackStart/ticks));
         const position = timeAt(ratio)/duration;
         for (const note of beat.notes) {
-          if (note.string>=1 && note.string<=6) {
+          if (note.string>=1 && note.string<=stringCount) {
             const fret = note.isDead ? 'x' : note.isTieDestination ? '('+note.fret+')' : note.fret;
-            notes.push({string:6-note.string,fret,position});
+            notes.push({string:stringCount-note.string,fret,position});
           }
         }
         if (beat.duration) rhythm.push({position,duration:beat.duration,dots:beat.dots || 0,
@@ -218,12 +219,12 @@ let activeTracks = [0,'',''];
 function selectedBars(guitarScore, tracks, selection) {
   const parts = selection.filter(index => index !== '').map(index => {
     const {staff,name} = tracks[Number(index)];
-    return {name,measures:guitarBars(staff,guitarScore)};
+    return {name,stringCount:staff.tuning.length,measures:guitarBars(staff,guitarScore)};
   });
   return parts[0].measures.map((measure,index) => ({
     start:measure.start,duration:measure.duration,
-    lanes:parts.map(({name,measures}) => ({
-      name,notes:measures[index]?.notes ?? [],rhythm:measures[index]?.rhythm ?? []
+    lanes:parts.map(({name,stringCount,measures}) => ({
+      name,stringCount,notes:measures[index]?.notes ?? [],rhythm:measures[index]?.rhythm ?? []
     }))
   }));
 }
@@ -256,9 +257,9 @@ el('gpFile').onchange = async event => {
   try {
     const library = await alphaTabLibrary();
     const nextScore = library.importer.ScoreLoader.loadScoreFromBytes(new Uint8Array(await file.arrayBuffer()));
-    const nextStaves = nextScore.tracks.flatMap(track => track.staves.filter(staff => staff.tuning.length === 6)
+    const nextStaves = nextScore.tracks.flatMap(track => track.staves.filter(staff => staff.tuning.length >= 4 && staff.tuning.length <= 8)
       .map(staff => ({staff,name:track.name || 'Guitare'})));
-    if (!nextStaves.length) throw Error('Le fichier ne contient aucune piste à six cordes.');
+    if (!nextStaves.length) throw Error('Le fichier ne contient aucune piste de quatre à huit cordes.');
     const selection = [0,'',''];
     setBars(selectedBars(nextScore,nextStaves,selection),repeatOrder(nextScore.masterBars));
     score = nextScore;
@@ -390,7 +391,7 @@ function draw(canvas,time,measures,points,duration) {
 }
 function drawLane(ctx,lane,bar,progress,w,h,multiple) {
   const top = h*.667, left=w*.042, right=w*.958, lineStart=w*.098, lineEnd=w*.929;
-  const y = string => h*(.744 + string*.021);
+  const y = string => h*(.744 + string*.105/(lane.stringCount-1));
   const x = fraction => lineStart+w*.010+fraction*(lineEnd-lineStart-w*.022);
   ctx.fillStyle='rgba(12,17,25,.9)';
   ctx.beginPath(); ctx.roundRect(left,top,right-left,h*.291,h*.019); ctx.fill();
@@ -399,9 +400,9 @@ function drawLane(ctx,lane,bar,progress,w,h,multiple) {
   if (multiple) ctx.fillText(lane.name,w*.108,h*.712,w*.8);
   ctx.strokeStyle='#596778'; ctx.lineWidth=Math.max(1,h*.00125);
   ctx.beginPath();
-  for(let string=0;string<6;string++){ctx.moveTo(lineStart,y(string));ctx.lineTo(lineEnd,y(string));}
-  ctx.moveTo(lineStart,y(0));ctx.lineTo(lineStart,y(5));
-  ctx.moveTo(lineEnd,y(0));ctx.lineTo(lineEnd,y(5));
+  for(let string=0;string<lane.stringCount;string++){ctx.moveTo(lineStart,y(string));ctx.lineTo(lineEnd,y(string));}
+  ctx.moveTo(lineStart,y(0));ctx.lineTo(lineStart,y(lane.stringCount-1));
+  ctx.moveTo(lineEnd,y(0));ctx.lineTo(lineEnd,y(lane.stringCount-1));
   ctx.stroke();
   drawRhythm(ctx,lane,x,h);
   const cursor = x(progress);
