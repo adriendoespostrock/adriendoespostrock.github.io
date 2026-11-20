@@ -257,7 +257,7 @@ el('gpFile').onchange = async event => {
     const library = await alphaTabLibrary();
     const nextScore = library.importer.ScoreLoader.loadScoreFromBytes(new Uint8Array(await file.arrayBuffer()));
     const nextStaves = nextScore.tracks.flatMap(track => track.staves.filter(staff => staff.tuning.length === 6)
-      .map((staff,index) => ({staff,name:(track.name || 'Guitare') + (index ? ' · portée '+(index+1) : '')})));
+      .map(staff => ({staff,name:track.name || 'Guitare'})));
     if (!nextStaves.length) throw Error('Le fichier ne contient aucune piste à six cordes.');
     const selection = [0,'',''];
     setBars(selectedBars(nextScore,nextStaves,selection),repeatOrder(nextScore.masterBars));
