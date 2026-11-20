@@ -370,6 +370,7 @@ function drawRhythm(ctx,bar,x,h) {
     });
   }
 }
+const tabTop = .667, tabHeight = .291;
 function draw(canvas,time,measures,points,duration) {
   const ctx = canvas.getContext('2d');
   const w=canvas.width,h=canvas.height;
@@ -380,21 +381,23 @@ function draw(canvas,time,measures,points,duration) {
   if (index < 0) return;
   const bar = measures[index];
   const count = bar.lanes.length;
-  const scale = count===1 ? 1 : count===2 ? .78 : .65;
+  const gap = .007;
+  const laneHeight = (tabHeight-gap*(count-1))/count;
+  const scale = laneHeight/tabHeight;
   bar.lanes.forEach((lane,slot) => {
     ctx.save();
-    ctx.translate(0,h*(.958*(1-scale)-(count-1-slot)*(.291*scale+.008)));
+    ctx.translate(0,h*(tabTop*(1-scale)+slot*(laneHeight+gap)));
     ctx.scale(1,scale);
     drawLane(ctx,lane,bar,(position-bar.start)/bar.duration,w,h,count>1);
     ctx.restore();
   });
 }
 function drawLane(ctx,lane,bar,progress,w,h,multiple) {
-  const top = h*.667, left=w*.042, right=w*.958, lineStart=w*.098, lineEnd=w*.929;
+  const top = h*tabTop, left=w*.042, right=w*.958, lineStart=w*.098, lineEnd=w*.929;
   const y = string => h*(.744 + string*.105/(lane.stringCount-1));
   const x = fraction => lineStart+w*.010+fraction*(lineEnd-lineStart-w*.022);
   ctx.fillStyle='rgba(12,17,25,.9)';
-  ctx.beginPath(); ctx.roundRect(left,top,right-left,h*.291,h*.019); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(left,top,right-left,h*tabHeight,h*.019); ctx.fill();
   ctx.fillStyle='#a6b5c8'; ctx.font='600 '+h*.021+'px system-ui';
   ctx.fillText(String(bar.index+1),w*.062,h*.712);
   if (multiple) ctx.fillText(lane.name,w*.108,h*.712,w*.8);
