@@ -326,9 +326,11 @@ function rhythmGroups(rhythm) {
   }
   return groups;
 }
-function drawRhythm(ctx,bar,x,h) {
-  const baseline = h*.922;
-  const spacing = h*.007;
+function drawRhythm(ctx,bar,x,h,top,height) {
+  const at = fraction => top+height*fraction;
+  const baseline = at(.9);
+  const spacing = height*.13;
+  const beamWeight = Math.max(1,height*.042);
   ctx.strokeStyle='#dbe5ef';
   ctx.fillStyle='#dbe5ef';
   ctx.lineWidth=Math.max(1,h*.0014);
@@ -342,28 +344,28 @@ function drawRhythm(ctx,bar,x,h) {
       if (event.rest) return;
       if (event.duration>1) {
         const half = event.duration===2;
-        stroke(left,h*.865,left,half ? h*.915 : baseline);
+        stroke(left,at(0),left,half ? at(.79) : baseline);
         if (half) {
-          stroke(left-h*.004,h*.915,left+h*.004,h*.915);
+          stroke(left-h*.004,at(.79),left+h*.004,at(.79));
         }
       }
       for (let dot=0;dot<event.dots;dot++) {
-        ctx.beginPath();ctx.arc(left+h*(.011+.006*dot),h*.881,h*.00165,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(left+h*(.011+.006*dot),at(.29),Math.max(1,height*.032),0,Math.PI*2);ctx.fill();
       }
       for (let level=0;level<levels[index];level++) {
         const y = baseline-level*spacing;
         if ((levels[index+1] || 0)>level) {
-          ctx.fillRect(left,y,x(group[index+1].position)-left,h*.0025);
+          ctx.fillRect(left,y,x(group[index+1].position)-left,beamWeight);
         } else if ((levels[index-1] || 0)<=level) {
           if (group.length===1) {
             ctx.beginPath();
-            ctx.moveTo(left,y);ctx.quadraticCurveTo(left+h*.010,y-h*.004,left+h*.012,y-h*.012);
+            ctx.moveTo(left,y);ctx.quadraticCurveTo(left+h*.010,y-height*.07,left+h*.012,y-height*.2);
             ctx.stroke();
           } else {
             const neighbor = group[index+1] ?? group[index-1];
             const hook = Math.sign(neighbor.position-event.position) *
               Math.min(h*.012,Math.abs(x(neighbor.position)-left)*.45);
-            ctx.fillRect(Math.min(left,left+hook),y,Math.abs(hook),h*.0025);
+            ctx.fillRect(Math.min(left,left+hook),y,Math.abs(hook),beamWeight);
           }
         }
       }
@@ -383,39 +385,39 @@ function draw(canvas,time,measures,points,duration) {
   const count = bar.lanes.length;
   const gap = .007;
   const laneHeight = (tabHeight-gap*(count-1))/count;
-  const scale = laneHeight/tabHeight;
   bar.lanes.forEach((lane,slot) => {
-    ctx.save();
-    ctx.translate(0,h*(tabTop*(1-scale)+slot*(laneHeight+gap)));
-    ctx.scale(1,scale);
-    drawLane(ctx,lane,bar,(position-bar.start)/bar.duration,w,h,count>1);
-    ctx.restore();
+    const top = h*(tabTop+slot*(laneHeight+gap));
+    drawLane(ctx,lane,bar,(position-bar.start)/bar.duration,w,h,top,h*laneHeight,count>1);
   });
 }
-function drawLane(ctx,lane,bar,progress,w,h,multiple) {
-  const top = h*tabTop, left=w*.042, right=w*.958, lineStart=w*.098, lineEnd=w*.929;
-  const y = string => h*(.744 + string*.105/(lane.stringCount-1));
+function drawLane(ctx,lane,bar,progress,w,h,top,height,multiple) {
+  const left=w*.042, right=w*.958, lineStart=w*.098, lineEnd=w*.929;
+  const at = fraction => top+height*fraction;
+  const stringGap = height*.46/(lane.stringCount-1);
+  const fretSize = Math.min(h*.021,stringGap*1.24);
+  const labelSize = Math.min(h*.021,height*.135);
+  const y = string => at(.23)+string*stringGap;
   const x = fraction => lineStart+w*.010+fraction*(lineEnd-lineStart-w*.022);
   ctx.fillStyle='rgba(12,17,25,.9)';
-  ctx.beginPath(); ctx.roundRect(left,top,right-left,h*tabHeight,h*.019); ctx.fill();
-  ctx.fillStyle='#a6b5c8'; ctx.font='600 '+h*.021+'px system-ui';
-  ctx.fillText(String(bar.index+1),w*.062,h*.712);
-  if (multiple) ctx.fillText(lane.name,w*.108,h*.712,w*.8);
+  ctx.beginPath(); ctx.roundRect(left,top,right-left,height,Math.min(h*.019,height*.095)); ctx.fill();
+  ctx.fillStyle='#a6b5c8'; ctx.font='600 '+labelSize+'px system-ui';
+  ctx.fillText(String(bar.index+1),w*.062,at(.158));
+  if (multiple) ctx.fillText(lane.name,w*.108,at(.158),w*.8);
   ctx.strokeStyle='#596778'; ctx.lineWidth=Math.max(1,h*.00125);
   ctx.beginPath();
   for(let string=0;string<lane.stringCount;string++){ctx.moveTo(lineStart,y(string));ctx.lineTo(lineEnd,y(string));}
   ctx.moveTo(lineStart,y(0));ctx.lineTo(lineStart,y(lane.stringCount-1));
   ctx.moveTo(lineEnd,y(0));ctx.lineTo(lineEnd,y(lane.stringCount-1));
   ctx.stroke();
-  drawRhythm(ctx,lane,x,h);
+  drawRhythm(ctx,lane,x,h,at(.735),height*.205);
   const cursor = x(progress);
   ctx.strokeStyle='#8de7c3'; ctx.lineWidth=Math.max(2,h*.002);
-  ctx.beginPath();ctx.moveTo(cursor,h*.727);ctx.lineTo(cursor,h*.934);ctx.stroke();
-  ctx.font='bold '+h*.021+'px monospace'; ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.beginPath();ctx.moveTo(cursor,at(.19));ctx.lineTo(cursor,at(.943));ctx.stroke();
+  ctx.font='bold '+fretSize+'px monospace'; ctx.textAlign='center';ctx.textBaseline='middle';
   for (const note of lane.notes) {
     const label=String(note.fret), center=x(note.position), baseline=y(note.string);
-    const size=ctx.measureText(label).width+h*.01;
-    ctx.fillStyle='#161e29';ctx.fillRect(center-size/2,baseline-h*.011,size,h*.022);
+    const size=ctx.measureText(label).width+fretSize*.45;
+    ctx.fillStyle='#161e29';ctx.fillRect(center-size/2,baseline-stringGap*.43,size,stringGap*.86);
     ctx.fillStyle='#f1f6ff';ctx.fillText(label,center,baseline);
   }
   ctx.textAlign='start';ctx.textBaseline='alphabetic';
