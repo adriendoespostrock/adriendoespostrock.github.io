@@ -105,7 +105,9 @@ function guitarBars(staff, score) {
           voice:voiceIndex,rest:beat.notes.length===0});
       }
     });
-    const result = {start,duration,notes,rhythm};
+    const numerator = master.timeSignatureNumerator || 4;
+    const denominator = master.timeSignatureDenominator || 4;
+    const result = {start,duration,notes,rhythm,numerator,denominator};
     start += duration;
     return result;
   });
@@ -216,15 +218,18 @@ function alphaTabLibrary() {
 let staves = [];
 const trackFields = ['track','track2','track3'].map(el);
 let activeTracks = [0,'',''];
+const pitchNames = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
 function selectedBars(guitarScore, tracks, selection) {
   const parts = selection.filter(index => index !== '').map(index => {
     const {staff,name} = tracks[Number(index)];
-    return {name,stringCount:staff.tuning.length,measures:guitarBars(staff,guitarScore)};
+    const strings = staff.tuning.map(pitch => pitchNames[((pitch%12)+12)%12] ?? '');
+    return {name,strings,measures:guitarBars(staff,guitarScore)};
   });
   return parts[0].measures.map((measure,index) => ({
     start:measure.start,duration:measure.duration,
-    lanes:parts.map(({name,stringCount,measures}) => ({
-      name,stringCount,notes:measures[index]?.notes ?? [],rhythm:measures[index]?.rhythm ?? []
+    numerator:measure.numerator,denominator:measure.denominator,
+    lanes:parts.map(({name,strings,measures}) => ({
+      name,strings,stringCount:strings.length,notes:measures[index]?.notes ?? [],rhythm:measures[index]?.rhythm ?? []
     }))
   }));
 }
@@ -391,7 +396,7 @@ function draw(canvas,time,measures,points,duration) {
   });
 }
 function drawLane(ctx,lane,bar,progress,w,h,top,height,multiple) {
-  const left=w*.042, right=w*.958, lineStart=w*.098, lineEnd=w*.929;
+  const left=w*.042, right=w*.958, lineStart=w*.132, lineEnd=w*.929;
   const at = fraction => top+height*fraction;
   const stringGap = height*.46/(lane.stringCount-1);
   const fretSize = Math.min(h*.021,stringGap*1.24);
@@ -409,6 +414,16 @@ function drawLane(ctx,lane,bar,progress,w,h,top,height,multiple) {
   ctx.moveTo(lineStart,y(0));ctx.lineTo(lineStart,y(lane.stringCount-1));
   ctx.moveTo(lineEnd,y(0));ctx.lineTo(lineEnd,y(lane.stringCount-1));
   ctx.stroke();
+  ctx.fillStyle='#c4d1e0';
+  ctx.textBaseline='middle';
+  ctx.textAlign='right';
+  ctx.font='600 '+fretSize*.92+'px system-ui';
+  lane.strings.forEach((name,string) => ctx.fillText(name,lineStart-w*.01,y(string)));
+  const meterSize = Math.min(h*.024,height*.158);
+  ctx.textAlign='center';
+  ctx.font='700 '+meterSize+'px system-ui';
+  ctx.fillText(String(bar.numerator),w*.072,at(.46)-meterSize*.52);
+  ctx.fillText(String(bar.denominator),w*.072,at(.46)+meterSize*.52);
   drawRhythm(ctx,lane,x,h,at(.735),height*.205);
   const cursor = x(progress);
   ctx.strokeStyle='#8de7c3'; ctx.lineWidth=Math.max(2,h*.002);
