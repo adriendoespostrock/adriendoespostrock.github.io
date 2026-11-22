@@ -1,0 +1,86 @@
+name: Actualiser YouTube
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/youtube-public.yml
+
+concurrency:
+  group: youtube-public-counters
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Récupérer et publier les compteurs publics
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64
+          import datetime
+          import json
+          import os
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          def request(url, headers, data=None):
+              body = None if data is None else json.dumps(data).encode()
+              method = "GET" if data is None else "PUT"
+              with urllib.request.urlopen(urllib.request.Request(url, data=body, headers=headers, method=method), timeout=25) as response:
+                  return json.load(response)
+
+          api_key = os.environ.get("YOUTUBE_API_KEY")
+          if not api_key:
+              raise SystemExit("Le secret YOUTUBE_API_KEY est introuvable.")
+          channel_id = "UCXGj1o-mn4Fp806xEVF0BeQ"
+          params = urllib.parse.urlencode({"part": "statistics", "id": channel_id})
+          try:
+              data = request("https://www.googleapis.com/youtube/v3/channels?" + params, {"X-Goog-Api-Key": api_key})
+          except urllib.error.HTTPError as error:
+              details = json.load(error).get("error", {})
+              reasons = [item.get("reason", "") for item in details.get("errors", [])]
+              raise SystemExit(f"YouTube Data API : HTTP {error.code} ({', '.join(reasons)}).")
+          except (OSError, ValueError):
+              raise SystemExit("YouTube Data API : réponse illisible ou connexion indisponible.")
+
+          items = data.get("items", [])
+          if len(items) != 1 or items[0].get("id") != channel_id:
+              raise SystemExit("Chaîne When Waves Collide introuvable.")
+          stats = items[0]["statistics"]
+          snapshot = {
+              "channelId": channel_id,
+              "retrievedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+              "views": int(stats["viewCount"]),
+              "videos": int(stats["videoCount"]),
+              "subscribers": None if stats.get("hiddenSubscriberCount") or "subscriberCount" not in stats else int(stats["subscriberCount"]),
+          }
+
+          endpoint = f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/contents/data/youtube-public.json"
+          headers = {
+              "Authorization": "Bearer " + os.environ["GH_TOKEN"],
+              "Accept": "application/vnd.github+json",
+              "Content-Type": "application/json",
+          }
+          update = {
+              "branch": "main",
+              "message": "Refresh public YouTube channel counters",
+              "content": base64.b64encode((json.dumps(snapshot, indent=2) + "\n").encode()).decode(),
+          }
+          try:
+              update["sha"] = request(endpoint + "?ref=main", headers)["sha"]
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+          request(endpoint, headers, update)
+          print("Compteurs publics actualisés.")
+          PY
