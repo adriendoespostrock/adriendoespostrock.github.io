@@ -43,6 +43,15 @@
 </details>
 <p id="spotify-source-status" role="status" hidden></p>
 </section>
+<section class="panel" style="margin-top:1rem" aria-labelledby="youtube-summary">
+<h2 id="youtube-summary">YouTube</h2>
+<p id="youtube-period" role="status">Chargement des statistiques YouTube…</p>
+<div class="table"><table id="youtube-table" hidden><thead><tr><th scope="col">Indicateur</th><th scope="col">Période précédente</th><th scope="col">Dernière période</th><th scope="col">Variation</th></tr></thead><tbody id="youtube-comparison"></tbody></table></div>
+<p id="youtube-report"></p>
+<p id="youtube-visualizer"></p>
+<p id="youtube-insight"></p>
+<p><small>Les statistiques quotidiennes et par vidéo dépendent du rapport sélectionné dans YouTube Studio.</small></p>
+</section>
 <div class="cards">
 <section class="panel" aria-labelledby="trend">
 <h2 id="trend">Évolution</h2>
@@ -1199,8 +1208,10 @@ function updateMetrics() {
 for (const platform of Object.keys(platforms)) option(platformSelect,platform,platform);
 platformSelect.addEventListener('change',updateMetrics);
 updateMetrics();
+let youtubeRecords = [];
 function records() {
   const deduped = new Map([[rowKey(publicRecord),publicRecord]]);
+  for (const row of youtubeRecords) deduped.set(rowKey(row),row);
   for (const row of publishedSpotify) deduped.set(rowKey(row),{...row,source:'Spotify for Artists'});
   for (const row of local) deduped.set(rowKey(row),{...row,source:'Relevé local'});
   for (const row of spotifyTotals([...deduped.values()])) {
@@ -1220,7 +1231,8 @@ function render(preferred = seriesSelect.value || JSON.stringify(['Spotify','Éc
     tile.className = 'tile';
     tile.append(element('h3',platform));
     const platformRows = rows.filter(r => r.platform === platform);
-    const latest = (platform === 'Spotify' && platformRows.find(r => r.metric === 'Écoutes' && r.days === 28)) || platformRows[0];
+    const featuredMetric = {Spotify:'Écoutes',YouTube:'Vues'}[platform];
+    const latest = platformRows.find(r => r.metric === featuredMetric && r.days === 28) || platformRows[0];
     if (latest) {
       tile.append(element('b',valueLabel(latest)),element('p',latest.metric + ' · ' + windowLabel(latest.days)),element('small',(latest.source === 'Public' ? 'Source consultée le ' : '') + dateLabel(latest.date)));
     } else tile.append(element('p','En attente d’un relevé'));
@@ -1467,6 +1479,61 @@ function renderSpotifySummary(rows) {
 }
 render();
 loadPublishedSpotify();
+async function loadYouTube() {
+  const period = byId('youtube-period');
+  try {
+    const response = await fetch('./data/youtube-audience.json',{cache:'no-cache'});
+    if (!response.ok) throw new Error('Données indisponibles');
+    const {daily,report,source} = await response.json();
+    if (!Array.isArray(daily) || !daily.length || !['YouTube Studio','YouTube Analytics API'].includes(source)) throw new Error('Rapport invalide');
+    const points = daily.map(({date,views}) => ({platform:'YouTube',metric:'Vues',date,days:1,value:views,source}));
+    if (!points.every(r => valid(r) && Number.isSafeInteger(r.value))) throw new Error('Relevé invalide');
+    const sorted = [...new Map(points.map(r => [r.date,r])).values()].sort((a,b) => a.date.localeCompare(b.date));
+    const rolling = [];
+    let sum = 0;
+    for (const [index,row] of sorted.entries()) {
+      sum += row.value;
+      if (index >= 28) sum -= sorted[index-28].value;
+      if (index >= 27 && Date.parse(row.date) - Date.parse(sorted[index-27].date) === 27 * dayMs) {
+        rolling.push({...row,days:28,value:sum});
+      }
+    }
+    youtubeRecords = [...rolling,...sorted];
+    const latest = rolling.at(-1);
+    const previous = latest && rolling.find(row => Date.parse(latest.date) - Date.parse(row.date) === 28 * dayMs);
+    const offset = (date, days) => new Date(Date.parse(date) - days * dayMs).toISOString().slice(0,10);
+    period.textContent = latest
+      ? 'Du ' + dateLabel(offset(latest.date,27)) + ' au ' + dateLabel(latest.date)
+        + (previous ? ' · Comparaison du ' + dateLabel(offset(previous.date,27)) + ' au ' + dateLabel(previous.date) : '')
+        + ' · ' + source
+      : 'Dernier relevé le ' + dateLabel(sorted.at(-1).date) + ' · ' + source;
+    if (latest) {
+      const tr = document.createElement('tr');
+      const label = element('th','Vues');
+      label.scope = 'row';
+      const delta = previous && (previous.value ? percent.format((latest.value - previous.value) / previous.value) : format.format(latest.value));
+      tr.append(label,...[previous ? valueLabel(previous) : '—',valueLabel(latest),delta || '—'].map(v => element('td',v)));
+      byId('youtube-comparison').replaceChildren(tr);
+      byId('youtube-table').hidden = false;
+    }
+    if (report) {
+      const range = 'Du ' + dateLabel(sorted[0].date) + ' au ' + dateLabel(sorted.at(-1).date);
+      byId('youtube-report').textContent = range + ' : ' + format.format(report.views) + ' vues, '
+        + format.format(report.watchHours) + ' h de visionnage, ' + format.format(report.netSubscribers)
+        + ' abonnés nets et ' + format.format(report.impressions) + ' impressions de miniatures (' + format.format(report.ctr) + ' % de clics).';
+      if (report.visualizer) {
+        const visualizer = report.visualizer;
+        byId('youtube-visualizer').textContent = 'Le visualizer de Carnyx a généré ' + format.format(visualizer.views)
+          + ' vues, ' + format.format(visualizer.watchHours) + ' h de visionnage et ' + format.format(visualizer.netSubscribers) + ' abonnés nets sur cette période.';
+        byId('youtube-insight').textContent = 'Comparez les extraits courts sur les vues et les clips sur le temps de visionnage et les abonnements. Testez une vidéo associée qui dirige les spectateurs des Shorts vers le visualizer.';
+      }
+    }
+    render();
+  } catch {
+    period.textContent = 'Les statistiques YouTube sont momentanément indisponibles.';
+  }
+}
+loadYouTube();
 </script>
 </body>
 </html>
