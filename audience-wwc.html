@@ -45,6 +45,10 @@
 </section>
 <section class="panel" style="margin-top:1rem" aria-labelledby="youtube-summary">
 <h2 id="youtube-summary">YouTube</h2>
+<h3>Compteurs publics de la chaîne</h3>
+<p id="youtube-public" role="status">Chargement des compteurs publics…</p>
+<p><a href="https://github.com/adriendoespostrock/adriendoespostrock.github.io/actions/workflows/youtube-public.yml">Actualiser les compteurs sur GitHub</a></p>
+<h3>Rapport YouTube Studio</h3>
 <p id="youtube-period" role="status">Chargement des statistiques YouTube…</p>
 <div class="table"><table id="youtube-table" hidden><thead><tr><th scope="col">Indicateur</th><th scope="col">Période précédente</th><th scope="col">Dernière période</th><th scope="col">Variation</th></tr></thead><tbody id="youtube-comparison"></tbody></table></div>
 <p id="youtube-report"></p>
@@ -1534,6 +1538,31 @@ async function loadYouTube() {
   }
 }
 loadYouTube();
+async function loadPublicYouTube() {
+  const target = byId('youtube-public');
+  try {
+    const url = 'https://raw.githubusercontent.com/adriendoespostrock/adriendoespostrock.github.io/main/data/youtube-public.json';
+    const response = await fetch(url, {cache:'no-cache'});
+    if (!response.ok) throw new Error('Compteurs indisponibles');
+    const {channelId,retrievedAt,views,videos,subscribers} = await response.json();
+    const timestamp = Date.parse(retrievedAt);
+    const isCount = value => Number.isSafeInteger(value) && value >= 0;
+    if (channelId !== 'UCXGj1o-mn4Fp806xEVF0BeQ' || !Number.isFinite(timestamp)
+      || !isCount(views) || !isCount(videos) || (subscribers !== null && !isCount(subscribers))) {
+      throw new Error('Compteurs invalides');
+    }
+    if (Date.now() - timestamp > 30 * dayMs) {
+      target.textContent = 'Le dernier relevé a plus de 30 jours. Relance l’actualisation sur GitHub.';
+      return;
+    }
+    const counts = [format.format(views) + ' vues cumulées',format.format(videos) + ' vidéos publiques'];
+    if (subscribers !== null) counts.push(format.format(subscribers) + ' abonnés (compteur arrondi)');
+    target.textContent = counts.join(' · ') + ' · YouTube Data API, relevé du ' + dateLabel(retrievedAt) + '.';
+  } catch {
+    target.textContent = 'Les compteurs publics sont indisponibles pour le moment. Le rapport Studio est affiché ci-dessous.';
+  }
+}
+loadPublicYouTube();
 </script>
 </body>
 </html>
