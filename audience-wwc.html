@@ -8,6 +8,7 @@
 <style>
 :root{color-scheme:dark;--bg:#0c1112;--panel:#151d1e;--line:#344342;--ink:#eff8f5;--muted:#afc4bf;--accent:#9cf4c6;font:100%/1.55 system-ui,sans-serif}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main,header,footer{width:min(1120px,calc(100% - 2rem));margin:auto}header,footer{padding:1.25rem 0}header{border-bottom:1px solid var(--line)}a{color:var(--accent)}h1,h2,h3,p{margin:0 0 .65rem}h1{font-size:clamp(2.4rem,7vw,5.25rem);letter-spacing:-.065em;line-height:1.03}h2{font-size:1.45rem}h3{font-size:1rem}.hero{padding:clamp(2.5rem,7vw,5rem) 0 2rem;background:radial-gradient(ellipse at top right,#203a32,transparent 63%)}.eyebrow{color:var(--accent);letter-spacing:.13em;font-size:.875rem;text-transform:uppercase}p,small{color:var(--muted)}.grid,.cards,.fields{display:grid;gap:1rem}.grid{grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}.cards{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);margin:1rem 0}.panel,.tile{background:var(--panel);border:1px solid var(--line);border-radius:1rem;padding:1.2rem}.tile b{font-size:2rem;display:block}.fields{grid-template-columns:repeat(3,minmax(0,1fr));margin:1rem 0}label{display:block;font-weight:600}input,select,button{font:inherit;border:1px solid var(--line);border-radius:.45rem;background:var(--bg);color:var(--ink);padding:.55rem;width:100%}button{width:auto;background:var(--accent);color:#10241a;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:default}button.secondary{background:transparent;color:var(--accent)}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}summary{cursor:pointer;font-weight:700}.table{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{border-bottom:1px solid var(--line);padding:.5rem;white-space:nowrap}#history{margin:1rem 0}#status,#change{color:var(--accent)}.actions{display:flex;flex-wrap:wrap;gap:.6rem}footer{border-top:1px solid var(--line)}@media(max-width:720px){.cards,.fields{grid-template-columns:1fr}}
+.analysis-nav{display:flex;gap:.75rem 1.25rem;flex-wrap:wrap;margin-top:1.2rem}.analysis-nav a{font-weight:700}.cross-analysis h3{font-size:1.2rem;margin-top:1.25rem}.analysis-signals{padding-left:1.3rem}.analysis-signals li{margin-bottom:.7rem}.plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(295px,100%),1fr));gap:1rem;padding-left:0;list-style:none;counter-reset:plan}.plan-grid li{counter-increment:plan}.plan-grid h4{margin:0 0 .4rem;font-size:1rem}.plan-grid h4::before{content:counter(plan) ". ";color:var(--accent)}.plan-cost{font-weight:700;color:var(--accent)}.plan-grid p:last-child{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -17,8 +18,44 @@
 <p class="eyebrow">Tableau de bord · Audience</p>
 <h1>When Waves Collide</h1>
 <p>Suivez vos écoutes, vos vues et votre communauté sur chaque plateforme.</p>
+<nav class="analysis-nav" aria-label="Accès au bilan"><a href="#analyse-croisee">Analyse croisée</a><a href="#plan-promotion">12 pistes de promotion</a></nav>
 </section>
-<section aria-labelledby="overview">
+<section class="panel cross-analysis" aria-labelledby="analyse-croisee">
+<h2 id="analyse-croisee">Analyse croisée autour de Carnyx</h2>
+<p><strong>Deux semaines de tests gratuits d’abord.</strong> La sortie de Carnyx coïncide avec une hausse sur Spotify, YouTube et Facebook. Mesurez quels contenus amènent des écoutes, des abonnements et des achats avant d’investir dans la publicité.</p>
+<div class="grid" aria-label="Budget promotionnel">
+<div class="tile"><b>50 €</b> Budget maximum</div>
+<div class="tile"><b>0 à 20 €</b> Un seul test publicitaire</div>
+<div class="tile"><b>30 €</b> En réserve si le test est lancé</div>
+</div>
+<h3>Les signaux par plateforme</h3>
+<ul class="analysis-signals">
+<li><strong>Spotify, YouTube et Facebook ont progressé autour de la sortie.</strong> Spotify a enregistré 3 425 écoutes contre 2 369 (+45 %) et YouTube 4 044 vues contre 1 018 (+297 %) sur les mêmes fenêtres de 28 jours. Facebook affiche 3 865 vues (+239 % selon Meta). Ces hausses coïncident dans le temps. Les relevés ne permettent pas d’attribuer les écoutes Spotify à une publication précise.</li>
+<li><strong>Le visualizer de Carnyx a généré des abonnements.</strong> Dans le rapport YouTube Studio, il totalise 781 vues, 18,4 heures regardées et 6 des 8 abonnés nets de la chaîne sur la période.</li>
+<li><strong>Les formats se distinguent selon le réseau.</strong> Sur Instagram, les Reels génèrent 43,1 % des interactions pour 35,5 % des vues. Sur Facebook, la photo de la veille de sortie a obtenu 1 165 vues, et le lien du jour J, 9 partages.</li>
+<li><strong>Instagram offre une marge sur les clics.</strong> Le relevé sur 90 jours affiche 149 visites du profil et 6 appuis sur des liens externes. Les non-abonnés représentent 34,7 % des vues et 10,8 % des interactions. Les visites et les appuis sont des totaux agrégés.</li>
+<li><strong>Le catalogue prolonge l’intérêt pour Carnyx.</strong> Sur Bandcamp, le titre représente 91 écoutes sur 187 et 6 achats sur 11. Le catalogue représente les cinq autres achats. Sur Apple Music, The Fallen mène les écoutes cumulées, tandis que Lawrence et Valhalla (Subdivided Remix) ressortent sur Shazam.</li>
+</ul>
+<p><small>Sources · Relevés du tableau de bord arrêtés les 21 et 22 novembre 2026. Les fenêtres Instagram, Bandcamp et Apple Music diffèrent. Les comparaisons avant et après les plus directes portent sur Spotify et YouTube.</small></p>
+<h3 id="plan-promotion">12 pistes de promotion</h3>
+<ol class="plan-grid">
+<li class="tile"><h4>Créer un lien distinct par canal</h4><p class="plan-cost">0 €</p><p>Faites pointer Instagram, Facebook et YouTube vers la même page Carnyx avec un lien identifiable par source.</p><p><strong>À suivre</strong> · Clics par source, si la page ou l’outil de lien les mesure.</p></li>
+<li class="tile"><h4>Relier les Shorts au visualizer</h4><p class="plan-cost">0 €</p><p>Ajoutez le clip comme vidéo associée aux Shorts de Carnyx qui s’y prêtent.</p><p><strong>À suivre</strong> · Vues, sources de trafic et abonnements du visualizer sur les sept jours suivants.</p></li>
+<li class="tile"><h4>Comparer deux accroches sur Instagram</h4><p class="plan-cost">0 €</p><p>Montez un teaser dans l’esprit du Reel du 23 octobre et un extrait de répétition de durée proche. Gardez le même appel à l’action.</p><p><strong>À suivre</strong> · Portée auprès des non-abonnés, partages et visites du profil sur les sept premiers jours.</p></li>
+<li class="tile"><h4>Mettre Carnyx en premier dans la bio Instagram</h4><p class="plan-cost">0 €</p><p>Épinglez un Reel qui indique où trouver le morceau complet.</p><p><strong>À suivre</strong> · Visites du profil et appuis sur le lien sur deux périodes de même durée.</p></li>
+<li class="tile"><h4>Rejouer la séquence Facebook</h4><p class="plan-cost">0 €</p><p>Pour le prochain clip ou live, publiez une photo du groupe la veille et un lien direct le jour J.</p><p><strong>À suivre</strong> · Partages et clics sortants de chaque publication.</p></li>
+<li class="tile"><h4>Décliner le making-of par instrument</h4><p class="plan-cost">0 €</p><p>Faites un extrait batterie et un extrait guitare à partir du même passage de Carnyx. Faites entendre la musique dès le début.</p><p><strong>À suivre</strong> · Rétention et partages sur plusieurs essais.</p></li>
+<li class="tile"><h4>Créer une porte d’entrée vers le catalogue</h4><p class="plan-cost">0 €</p><p>Créez une courte playlist du groupe qui enchaîne Carnyx, The Fallen et deux autres titres.</p><p><strong>À suivre</strong> · Écoutes et sauvegardes des titres sur Spotify, sur deux fenêtres de quatre semaines.</p></li>
+<li class="tile"><h4>Relayer Chasm auprès de la communauté Bandcamp</h4><p class="plan-cost">0 €</p><p>Partez de Carnyx dans un message à la communauté et proposez Cataclysm comme morceau à écouter ensuite.</p><p><strong>À suivre</strong> · Écoutes de Cataclysm et achats de Chasm au prochain relevé de 60 jours.</p></li>
+<li class="tile"><h4>Écrire à cinq relais post-rock ciblés</h4><p class="plan-cost">0 €</p><p>Choisissez des radios, médias ou curateurs qui ont déjà relayé des groupes proches. Envoyez un message personnalisé avec un lien d’écoute.</p><p><strong>À suivre</strong> · Réponses, relais obtenus et clics lorsque le lien est mesurable.</p></li>
+<li class="tile"><h4>Organiser un échange avec un autre groupe</h4><p class="plan-cost">0 €</p><p>Proposez un Reel collaboratif, une recommandation croisée ou une playlist commune à un groupe avec lequel vous avez déjà joué.</p><p><strong>À suivre</strong> · Portée auprès des non-abonnés et visites du profil pendant la semaine du relais.</p></li>
+<li class="tile"><h4>Tester deux titres du catalogue en vidéo courte</h4><p class="plan-cost">0 €</p><p>Faites un extrait de Lawrence et un du remix de Valhalla. Leurs résultats sur Shazam donnent deux titres à essayer.</p><p><strong>À suivre</strong> · Rétention, partages et clics associés quand ils sont mesurables.</p></li>
+<li class="tile"><h4>Financer un contenu qui génère déjà des clics</h4><p class="plan-cost">0 à 20 €</p><p>Si un Reel génère des visites ou si un lien Facebook génère des clics en organique, testez un seul contenu avec un lien dédié.</p><p><strong>À suivre</strong> · Coût par clic sortant si c’est l’objectif. Gardez le reste du budget si le test donne peu de résultats.</p></li>
+</ol>
+<h3>Par où commencer</h3>
+<p>Configurez les liens et associez les Shorts au visualizer. Testez ensuite les deux Reels et contactez les relais post-rock. Lancez le test payant seulement si un contenu génère déjà l’action recherchée. Au prochain relevé Spotify, vérifiez aussi si les sauvegardes se maintiennent après leur hausse de 55 à 118.</p>
+</section>
+<section aria-labelledby="overview" style="margin-top:1rem">
 <h2 id="overview">Derniers relevés</h2>
 <div class="grid" id="tiles"></div>
 </section>
