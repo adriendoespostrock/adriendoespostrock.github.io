@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Audience · When Waves Collide</title>
+<style>
+:root{color-scheme:dark;--bg:#0c1112;--panel:#151d1e;--line:#344342;--ink:#eff8f5;--muted:#afc4bf;--accent:#9cf4c6;font:100%/1.55 system-ui,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main,header,footer{width:min(1120px,calc(100% - 2rem));margin:auto}header,footer{padding:1.25rem 0}header{border-bottom:1px solid var(--line)}a{color:var(--accent)}h1,h2,h3,p{margin:0 0 .65rem}h1{font-size:clamp(2.4rem,7vw,5.25rem);letter-spacing:-.065em;line-height:1.03}h2{font-size:1.45rem}h3{font-size:1rem}.hero{padding:clamp(2.5rem,7vw,5rem) 0 2rem;background:radial-gradient(ellipse at top right,#203a32,transparent 63%)}.eyebrow{color:var(--accent);letter-spacing:.13em;font-size:.875rem;text-transform:uppercase}p,small{color:var(--muted)}.grid,.cards,.fields{display:grid;gap:1rem}.grid{grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}.cards{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);margin:1rem 0}.panel,.tile{background:var(--panel);border:1px solid var(--line);border-radius:1rem;padding:1.2rem}.tile b{font-size:2rem;display:block}.fields{grid-template-columns:repeat(3,minmax(0,1fr));margin:1rem 0}label{display:block;font-weight:600}input,select,button{font:inherit;border:1px solid var(--line);border-radius:.45rem;background:var(--bg);color:var(--ink);padding:.55rem;width:100%}button{width:auto;background:var(--accent);color:#10241a;font-weight:700;cursor:pointer}button.secondary{background:transparent;color:var(--accent)}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}summary{cursor:pointer;font-weight:700}.table{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{border-bottom:1px solid var(--line);padding:.5rem;white-space:nowrap}#history{margin:1rem 0}#status,#change{color:var(--accent)}.actions{display:flex;flex-wrap:wrap;gap:.6rem}footer{border-top:1px solid var(--line)}@media(max-width:720px){.cards,.fields{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><a href="./">Adrien Does Post Rock</a></header>
+<main>
+<section class="hero">
+<p class="eyebrow">Tableau de bord · Audience</p>
+<h1>When Waves Collide</h1>
+<p>Suivez vos écoutes, vos vues et votre communauté sur chaque plateforme.</p>
+</section>
+<section aria-labelledby="overview">
+<h2 id="overview">Derniers relevés</h2>
+<div class="grid" id="tiles"></div>
+</section>
+<div class="cards">
+<section class="panel" aria-labelledby="trend">
+<h2 id="trend">Évolution</h2>
+<label for="series">Indicateur</label>
+<select id="series"></select>
+<p id="change" aria-live="polite"></p>
+<div class="table"><table id="history" hidden><thead><tr><th scope="col">Date de fin</th><th scope="col">Fenêtre</th><th scope="col">Valeur</th><th scope="col">Source</th></tr></thead><tbody></tbody></table></div>
+</section>
+<section class="panel" aria-labelledby="actions">
+<h2 id="actions">Pistes à tester</h2>
+<p id="insight"></p>
+<p><strong>Autour de Carnyx</strong></p>
+<p>Comparez un extrait du visualizer et un extrait de répétition de durée proche. Relevez la rétention et les abonnements sur YouTube, puis les partages et les visites de profil sur Instagram. Utilisez un lien distinct par format pour mesurer les clics vers la sortie.</p>
+<p><a href="https://whenwavescollide.com/music/">Carnyx et le catalogue du groupe</a></p>
+</section>
+</div>
+<section class="panel" aria-labelledby="add">
+<h2 id="add">Ajouter un relevé</h2>
+<p>Les chiffres saisis et importés sont stockés dans ce navigateur. Vous pouvez sauvegarder votre historique en JSON et le réimporter. Les plateformes ne sont pas synchronisées automatiquement.</p>
+<form id="entry">
+<div class="fields">
+<label>Plateforme<select name="platform" id="platform"></select></label>
+<label>Indicateur<select name="metric" id="metric"></select></label>
+<label>Date de fin ou du relevé<input type="date" name="date" required></label>
+<label>Fenêtre en jours<input type="number" name="days" min="0" max="3660" step="1" value="28" required></label>
+<label>Valeur<input type="number" name="value" min="0" step="any" required></label>
+</div>
+<p>Utilisez 0 pour un compteur relevé à une date donnée, par exemple le total d’abonnés. Pour comparer deux périodes d’activité, choisissez la même durée et des dates sans chevauchement.</p>
+<div class="actions"><button>Enregistrer le relevé</button><button class="secondary" type="button" id="backup">Exporter en JSON</button></div>
+</form>
+<label for="restore">Importer une sauvegarde JSON</label>
+<input id="restore" type="file" accept=".json,application/json">
+<p id="status" role="status"></p>
+<details><summary>Où récupérer les chiffres</summary>
+<ul>
+<li><a href="https://support.spotify.com/fr/artists/article/exporting-data/">Spotify for Artists</a> · Audience et statistiques par morceau ou playlist.</li>
+<li><a href="https://studio.youtube.com/">YouTube Studio</a> · Analytics, puis Mode avancé pour comparer les formats.</li>
+<li><a href="https://business.facebook.com/">Meta Business Suite</a> · Statistiques Instagram et Facebook.</li>
+<li><a href="https://artists.apple.com/">Apple Music for Artists</a> · Écoutes et Shazams.</li>
+<li><a href="https://whenwavescollide.bandcamp.com/">Bandcamp</a> · Consultez les statistiques depuis votre compte artiste.</li>
+</ul>
+<p>Relevez les totaux de période dans chaque outil. Les auditeurs uniques et la portée se lisent sur la période entière, car un même compte peut apparaître plusieurs jours.</p>
+</details>
+</section>
+</main>
+<footer><small>Les audiences des plateformes peuvent se recouper. Les indicateurs restent propres à chaque service.</small></footer>
+<script>
+const platforms = {
+  Spotify:{metrics:['Auditeurs','Écoutes','Sauvegardes','Ajouts en playlist','Abonnés'], advice:'Vérifiez si les écoutes viennent des playlists ou d’une recherche volontaire. Mesurez les sauvegardes et les ajouts en playlist après vos publications pour voir si les nouvelles écoutes se prolongent.'},
+  YouTube:{metrics:['Vues','Heures de visionnage','Rétention moyenne (%)','Abonnés','Impressions','Taux de clics (%)'],advice:'Comparez les Shorts et les vidéos longues séparément. Si les impressions progressent sans hausse comparable des vues, testez un titre ou une miniature. Si la rétention baisse, examinez les premières secondes.'},
+  Instagram:{metrics:['Comptes touchés','Vues','Interactions','Partages','Visites du profil','Clics sur le lien','Abonnés'],advice:'Comparez les partages et les visites de profil par compte touché sur des Reels comparables. Si la portée monte sans générer de visites, testez un appel à l’action qui donne une raison d’ouvrir le profil.'},
+  Bandcamp:{metrics:['Écoutes','Ventes','Abonnés'],advice:'Suivez les ventes lors d’une mise en avant du vinyle de Chasm et comparez-les à une période de durée identique.'},
+  'Apple Music':{metrics:['Écoutes','Auditeurs','Shazams'],advice:'Regardez si les villes où les Shazams augmentent sont aussi celles où les écoutes progressent.'},
+  Facebook:{metrics:['Comptes touchés','Interactions','Clics sur le lien','Abonnés'],advice:'Comparez la portée et les clics pour les annonces de concert et les publications musicales.'},
+  Bandsintown:{metrics:['Fans','Demandes de concert'],advice:'Croisez les demandes de concert par ville avec la géographie des écoutes avant de solliciter des salles.'}
+};
+const publicRecord = {platform:'Bandsintown',metric:'Fans',date:'2026-11-22',days:0,value:364,source:'Public'};
+const source = 'https://www.bandsintown.com/fr/a/15499584-when-waves-collide';
+const storageKey = 'wwc-audience-v1';
+const byId = id => document.getElementById(id);
+const format = new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2});
+const dateFormat = new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeZone:'UTC'});
+const percent = new Intl.NumberFormat('fr-FR',{style:'percent',maximumFractionDigits:1,signDisplay:'always'});
+const dateLabel = date => dateFormat.format(new Date(date));
+const platformSelect = byId('platform');
+const metricSelect = byId('metric');
+const seriesSelect = byId('series');
+const status = byId('status');
+const rowKey = r => JSON.stringify([r.platform,r.metric,r.days,r.date]);
+const seriesKey = r => JSON.stringify([r.platform,r.metric,r.days]);
+function valid(r) {
+  return Boolean(r && Object.hasOwn(platforms,r.platform) && platforms[r.platform].metrics.includes(r.metric)
+    && typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && Number.isFinite(Date.parse(r.date))
+    && new Date(r.date).toISOString().slice(0,10) === r.date && r.date.slice(0,4) !== '0000'
+    && Number.isInteger(r.days) && r.days >= 0 && r.days <= 3660 && Number.isFinite(r.value) && r.value >= 0
+    && (!r.metric.endsWith('(%)') || r.value <= 100));
+}
+let local = [];
+try {
+  const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+  local = Array.isArray(saved) ? saved.filter(valid) : [];
+} catch {
+  status.textContent = 'Le stockage local est indisponible. Vous pouvez exporter les relevés de cette session.';
+}
+function option(select, value, label) { select.add(new Option(label,value)); }
+function element(tag, value) {
+  const node = document.createElement(tag);
+  node.textContent = value;
+  return node;
+}
+function updateMetrics() {
+  metricSelect.replaceChildren();
+  for (const metric of platforms[platformSelect.value].metrics) option(metricSelect,metric,metric);
+}
+for (const platform of Object.keys(platforms)) option(platformSelect,platform,platform);
+platformSelect.addEventListener('change',updateMetrics);
+updateMetrics();
+function records() {
+  const deduped = new Map([[rowKey(publicRecord),publicRecord]]);
+  for (const row of local) deduped.set(rowKey(row),{...row,source:'Relevé local'});
+  return [...deduped.values()].sort((a,b) => b.date.localeCompare(a.date));
+}
+const windowLabel = days => days ? days + ' j' : 'Instantané';
+const valueLabel = row => format.format(row.value) + (row.metric.endsWith('(%)') ? ' %' : '');
+function render(preferred = seriesSelect.value) {
+  const rows = records();
+  const tiles = byId('tiles');
+  tiles.replaceChildren();
+  seriesSelect.replaceChildren();
+  for (const platform of Object.keys(platforms)) {
+    const tile = element('article','');
+    tile.className = 'tile';
+    tile.append(element('h3',platform));
+    const platformRows = rows.filter(r => r.platform === platform);
+    const latest = platformRows[0];
+    if (latest) {
+      tile.append(element('b',valueLabel(latest)),element('p',latest.metric + ' · ' + windowLabel(latest.days)),element('small',(latest.source === 'Public' ? 'Source consultée le ' : '') + dateLabel(latest.date)));
+    } else tile.append(element('p','En attente d’un relevé'));
+    const categories = new Map(platformRows.map(row => [seriesKey(row),row]));
+    for (const [key,row] of categories) option(seriesSelect,key,platform + ' · ' + row.metric + ' · ' + windowLabel(row.days));
+    tiles.append(tile);
+  }
+  if ([...seriesSelect.options].some(o => o.value === preferred)) seriesSelect.value = preferred;
+  renderSeries(rows);
+}
+function renderSeries(rows) {
+  const series = rows.filter(row => seriesKey(row) === seriesSelect.value);
+  const [latest] = series;
+  const previous = series.slice(1).find(row => (Date.parse(latest.date)-Date.parse(row.date))/86400000 >= latest.days);
+  const change = byId('change');
+  const body = document.querySelector('#history tbody');
+  body.replaceChildren();
+  byId('history').hidden = !latest;
+  if (!latest) return;
+  for (const row of series) {
+    const tr = document.createElement('tr');
+    for (const value of [dateLabel(row.date),windowLabel(row.days),valueLabel(row)]) tr.append(element('td',value));
+    const cell = element('td',row.source === 'Public' ? '' : row.source);
+    if (row.source === 'Public') {
+      const link = element('a','Bandsintown');
+      link.href = source;
+      cell.append(link);
+    }
+    tr.append(cell);
+    body.append(tr);
+  }
+  if (!previous) change.textContent = 'Ajoutez un deuxième relevé comparable pour calculer la variation.';
+  else {
+    const difference = latest.value - previous.value;
+    const signed = (difference > 0 ? '+' : '') + format.format(difference);
+    const delta = latest.metric.endsWith('(%)') ? signed + ' points'
+      : signed + (previous.value ? ' (' + percent.format(difference/previous.value) + ')' : '');
+    change.textContent = delta + ' par rapport au ' + dateLabel(previous.date) + '.';
+  }
+  const direction = previous ? Math.sign(latest.value - previous.value) : null;
+  const nextStep = direction === 1 ? 'Hausse observée. Repérez les publications, sorties ou playlists apparues entre les relevés, puis testez à nouveau le format le plus prometteur. '
+    : direction === -1 ? 'Baisse observée. Vérifiez si un pic ponctuel explique l’écart, puis comparez les contenus et sources de trafic des deux périodes. '
+    : direction === 0 ? 'Valeur stable. Modifiez un seul élément lors du prochain test et refaites le relevé sur la même durée. '
+    : 'Un deuxième relevé comparable permettra de mesurer l’évolution. ';
+  byId('insight').textContent = nextStep + platforms[latest.platform].advice;
+}
+function save(rows) {
+  const merged = new Map(local.map(row => [rowKey(row),row]));
+  for (const row of rows) merged.set(rowKey(row),row);
+  local = [...merged.values()];
+  try {
+    localStorage.setItem(storageKey,JSON.stringify(local));
+    status.textContent = 'Historique enregistré sur cet appareil.';
+  } catch {
+    status.textContent = 'Historique conservé pour cette session. Exportez-le pour le sauvegarder.';
+  }
+}
+seriesSelect.addEventListener('change',() => renderSeries(records()));
+byId('entry').addEventListener('submit',event => {
+  event.preventDefault();
+  const {platform,metric,date,days,value} = Object.fromEntries(new FormData(event.currentTarget));
+  const row = {platform,metric,date,days:Number(days),value:Number(value)};
+  if (!valid(row)) { status.textContent = 'Vérifiez la date et la valeur. Un pourcentage doit être compris entre 0 et 100.'; return; }
+  save([row]);
+  render(seriesKey(row));
+});
+byId('backup').addEventListener('click',() => {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(local,null,2)],{type:'application/json'}));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'when-waves-collide-audience.json';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url),1000);
+});
+byId('restore').addEventListener('change',async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const rows = JSON.parse(await file.text());
+    if (!Array.isArray(rows) || !rows.length || !rows.every(valid)) throw new Error();
+    save(rows.map(({platform,metric,date,days,value}) => ({platform,metric,date,days,value})));
+    render(seriesKey(rows[0]));
+  } catch {
+    status.textContent = 'Import impossible. Sélectionnez une sauvegarde JSON générée par le tableau de bord.';
+  } finally {
+    event.target.value = '';
+  }
+});
+render();
+</script>
+</body>
+</html>
