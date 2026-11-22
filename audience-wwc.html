@@ -93,6 +93,31 @@
 <p><strong>À tester.</strong> Pour la prochaine sortie, comparez une annonce photo la veille et une publication avec le lien le jour J. Mesurez les clics sortants et les partages de chaque publication.</p>
 <p><small>Sources · Tableau de bord Creator et export Bibliothèque de contenu Facebook. Les vues de la Page sur 28 jours et les compteurs par publication couvrent des périmètres différents.</small></p>
 </section>
+<section class="panel" style="margin-top:1rem" aria-labelledby="apple-music-summary">
+<h2 id="apple-music-summary">Apple Music</h2>
+<p>Catalogue depuis le début · du 30 juin 2015 au 21 novembre 2026</p>
+<p><strong>25 502 écoutes</strong> · <strong>712 Shazams</strong> · 62 passages radio · 36 achats · 14 morceaux dans l’export</p>
+<details><summary>Statistiques par morceau</summary>
+<div class="table"><table><thead><tr><th scope="col">Morceau</th><th scope="col">Écoutes</th><th scope="col">Auditeurs par jour (moy.)</th><th scope="col">Shazams</th><th scope="col">Passages radio</th><th scope="col">Achats</th></tr></thead><tbody>
+<tr><th scope="row">The Fallen</th><td>5 041</td><td>2</td><td>53</td><td>2</td><td>8</td></tr>
+<tr><th scope="row">Dark Matter</th><td>3 831</td><td>2</td><td>30</td><td>4</td><td>3</td></tr>
+<tr><th scope="row">Cataclysm</th><td>3 316</td><td>2</td><td>63</td><td>3</td><td>2</td></tr>
+<tr><th scope="row">Valhalla</th><td>3 242</td><td>2</td><td>48</td><td>14</td><td>5</td></tr>
+<tr><th scope="row">Chimera</th><td>2 244</td><td>2</td><td>36</td><td>4</td><td>3</td></tr>
+<tr><th scope="row">Omen</th><td>2 190</td><td>2</td><td>11</td><td>6</td><td>2</td></tr>
+<tr><th scope="row">Star Collapse</th><td>1 906</td><td>1</td><td>106</td><td>0</td><td>6</td></tr>
+<tr><th scope="row">Stranding</th><td>1 567</td><td>1</td><td>18</td><td>0</td><td>0</td></tr>
+<tr><th scope="row">Lawrence</th><td>1 229</td><td>1</td><td>142</td><td>15</td><td>4</td></tr>
+<tr><th scope="row">Intro</th><td>409</td><td>1</td><td>6</td><td>11</td><td>1</td></tr>
+<tr><th scope="row">Star Collapse (Swœr Remix)</th><td>208</td><td>1</td><td>27</td><td>0</td><td>1</td></tr>
+<tr><th scope="row">Carnyx</th><td>167</td><td>5</td><td>0</td><td>3</td><td>0</td></tr>
+<tr><th scope="row">Valhalla (Subdivided Remix)</th><td>152</td><td>1</td><td>172</td><td>0</td><td>1</td></tr>
+<tr><th scope="row">Red Hill</th><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+</tbody></table></div></details>
+<p><strong>The Fallen</strong> arrive en tête avec 5 041 écoutes. <strong>Valhalla (Subdivided Remix)</strong> est le titre le plus identifié sur Shazam (172), suivi de <strong>Lawrence</strong> (142).</p>
+<p><strong>À tester.</strong> Associez Carnyx à The Fallen dans une playlist du groupe, puis relevez les écoutes et les Shazams de ces titres sur deux fenêtres de quatre semaines. Les cumuls du catalogue couvrent des titres sortis à des dates différentes.</p>
+<p><small>Source · Export par morceau Apple Music for Artists. Les moyennes d’auditeurs par morceau ne sont pas additionnées.</small></p>
+</section>
 <div class="cards">
 <section class="panel" aria-labelledby="trend">
 <h2 id="trend">Évolution</h2>
@@ -1204,7 +1229,7 @@ const platforms = {
   YouTube:{metrics:['Vues','Heures de visionnage','Rétention moyenne (%)','Abonnés','Impressions','Taux de clics (%)'],advice:'Comparez les Shorts et les vidéos longues séparément. Si les impressions progressent sans hausse comparable des vues, testez un titre ou une miniature. Si la rétention baisse, examinez les premières secondes.'},
   Instagram:{metrics:['Comptes touchés','Spectateurs','Vues','Interactions','Comptes ayant interagi','Partages','Visites du profil','Clics sur le lien','Abonnés'],advice:'Comparez les partages et les visites de profil par compte touché sur des Reels comparables. Si la portée monte sans générer de visites, testez un appel à l’action qui donne une raison d’ouvrir le profil.'},
   Bandcamp:{metrics:['Écoutes','Ventes','Abonnés'],advice:'Suivez les ventes lors d’une mise en avant du vinyle de Chasm et comparez-les à une période de durée identique.'},
-  'Apple Music':{metrics:['Écoutes','Auditeurs','Shazams'],advice:'Regardez si les villes où les Shazams augmentent sont aussi celles où les écoutes progressent.'},
+  'Apple Music':{metrics:['Écoutes','Auditeurs','Shazams','Écoutes cumulées','Shazams cumulés'],advice:'Regardez si les villes où les Shazams augmentent sont aussi celles où les écoutes progressent.'},
   Facebook:{metrics:['Comptes touchés','Vues','Interactions','Clics sur le lien','Abonnés'],advice:'Comparez la portée et les clics pour les annonces de concert et les publications musicales.'},
   Bandsintown:{metrics:['Fans','Demandes de concert'],advice:'Croisez les demandes de concert par ville avec la géographie des écoutes avant de solliciter des salles.'}
 };
@@ -1250,6 +1275,10 @@ for (const platform of Object.keys(platforms)) option(platformSelect,platform,pl
 platformSelect.addEventListener('change',updateMetrics);
 updateMetrics();
 let youtubeRecords = [];
+const appleMusicRecords = [
+  ['Écoutes cumulées',25502],
+  ['Shazams cumulés',712]
+].map(([metric,value]) => ({platform:'Apple Music',metric,value,date:'2026-11-21',days:0,source:'Apple Music for Artists'}));
 const facebookViews = {
   platform:'Facebook',metric:'Vues',date:'2026-11-21',days:28,value:3865,source:'Tableau de bord Creator'
 };
@@ -1266,6 +1295,7 @@ function records() {
   const deduped = new Map([[rowKey(publicRecord),publicRecord]]);
   deduped.set(rowKey(facebookViews),facebookViews);
   for (const row of instagramRecords) deduped.set(rowKey(row),row);
+  for (const row of appleMusicRecords) deduped.set(rowKey(row),row);
   for (const row of youtubeRecords) deduped.set(rowKey(row),row);
   for (const row of publishedSpotify) deduped.set(rowKey(row),{...row,source:'Spotify for Artists'});
   for (const row of local) deduped.set(rowKey(row),{...row,source:'Relevé local'});
