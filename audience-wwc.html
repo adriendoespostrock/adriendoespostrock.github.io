@@ -52,6 +52,8 @@
 <p>Utilisez 0 pour un compteur relevé à une date donnée, par exemple le total d’abonnés. Pour comparer deux périodes d’activité, choisissez la même durée et des dates sans chevauchement.</p>
 <div class="actions"><button>Enregistrer le relevé</button><button class="secondary" type="button" id="backup">Exporter en JSON</button></div>
 </form>
+<p><label for="spotify-csv">Importer le CSV Audience de Spotify for Artists</label>
+<input id="spotify-csv" type="file" accept=".csv,text/csv"></p>
 <label for="restore">Importer une sauvegarde JSON</label>
 <input id="restore" type="file" accept=".json,application/json">
 <p id="status" role="status"></p>
@@ -63,14 +65,14 @@
 <li><a href="https://artists.apple.com/">Apple Music for Artists</a> · Écoutes et Shazams.</li>
 <li><a href="https://whenwavescollide.bandcamp.com/">Bandcamp</a> · Consultez les statistiques depuis votre compte artiste.</li>
 </ul>
-<p>Relevez les totaux de période dans chaque outil. Les auditeurs uniques et la portée se lisent sur la période entière, car un même compte peut apparaître plusieurs jours.</p>
+<p>L’import Spotify calcule les écoutes, sauvegardes et ajouts en playlist sur 28 jours si chaque date est disponible. Les auditeurs mensuels et abonnés sont repris tels quels du fichier. Pour les autres plateformes, relevez les totaux de période dans chaque outil. Les auditeurs uniques et la portée se lisent sur la période entière, car un même compte peut apparaître plusieurs jours.</p>
 </details>
 </section>
 </main>
 <footer><small>Les audiences des plateformes peuvent se recouper. Les indicateurs restent propres à chaque service.</small></footer>
 <script>
 const platforms = {
-  Spotify:{metrics:['Auditeurs','Écoutes','Sauvegardes','Ajouts en playlist','Abonnés'], advice:'Vérifiez si les écoutes viennent des playlists ou d’une recherche volontaire. Mesurez les sauvegardes et les ajouts en playlist après vos publications pour voir si les nouvelles écoutes se prolongent.'},
+  Spotify:{metrics:['Auditeurs','Auditeurs mensuels','Auditeurs actifs mensuels','Super auditeurs','Écoutes','Sauvegardes','Ajouts en playlist','Abonnés'], advice:'Vérifiez si les écoutes viennent des playlists ou d’une recherche volontaire. Mesurez les sauvegardes et les ajouts en playlist après vos publications pour voir si les nouvelles écoutes se prolongent.'},
   YouTube:{metrics:['Vues','Heures de visionnage','Rétention moyenne (%)','Abonnés','Impressions','Taux de clics (%)'],advice:'Comparez les Shorts et les vidéos longues séparément. Si les impressions progressent sans hausse comparable des vues, testez un titre ou une miniature. Si la rétention baisse, examinez les premières secondes.'},
   Instagram:{metrics:['Comptes touchés','Vues','Interactions','Partages','Visites du profil','Clics sur le lien','Abonnés'],advice:'Comparez les partages et les visites de profil par compte touché sur des Reels comparables. Si la portée monte sans générer de visites, testez un appel à l’action qui donne une raison d’ouvrir le profil.'},
   Bandcamp:{metrics:['Écoutes','Ventes','Abonnés'],advice:'Suivez les ventes lors d’une mise en avant du vinyle de Chasm et comparez-les à une période de durée identique.'},
@@ -121,6 +123,7 @@ platformSelect.addEventListener('change',updateMetrics);
 updateMetrics();
 function records() {
   const deduped = new Map([[rowKey(publicRecord),publicRecord]]);
+  for (const row of spotifyTotals(local)) deduped.set(rowKey(row),{...row,source:'Calcul sur 28 jours'});
   for (const row of local) deduped.set(rowKey(row),{...row,source:'Relevé local'});
   return [...deduped.values()].sort((a,b) => b.date.localeCompare(a.date));
 }
@@ -156,7 +159,7 @@ function renderSeries(rows) {
   body.replaceChildren();
   byId('history').hidden = !latest;
   if (!latest) return;
-  for (const row of series) {
+  for (const row of series.slice(0,90)) {
     const tr = document.createElement('tr');
     for (const value of [dateLabel(row.date),windowLabel(row.days),valueLabel(row)]) tr.append(element('td',value));
     const cell = element('td',row.source === 'Public' ? '' : row.source);
@@ -177,6 +180,7 @@ function renderSeries(rows) {
     change.textContent = delta + ' par rapport au ' + dateLabel(previous.date) + '.';
   }
   const direction = previous ? Math.sign(latest.value - previous.value) : null;
+  if (series.length > 90) change.textContent += ' Tableau limité aux 90 derniers relevés.';
   const nextStep = direction === 1 ? 'Hausse observée. Repérez les publications, sorties ou playlists apparues entre les relevés, puis testez à nouveau le format le plus prometteur. '
     : direction === -1 ? 'Baisse observée. Vérifiez si un pic ponctuel explique l’écart, puis comparez les contenus et sources de trafic des deux périodes. '
     : direction === 0 ? 'Valeur stable. Modifiez un seul élément lors du prochain test et refaites le relevé sur la même durée. '
@@ -223,6 +227,73 @@ byId('restore').addEventListener('change',async event => {
     status.textContent = 'Import impossible. Sélectionnez une sauvegarde JSON générée par le tableau de bord.';
   } finally {
     event.target.value = '';
+  }
+});
+const spotifyColumns = {
+  listeners:['Auditeurs',1],
+  'monthly listeners':['Auditeurs mensuels',0],
+  'monthly active listeners':['Auditeurs actifs mensuels',0],
+  'super listeners':['Super auditeurs',0],
+  streams:['Écoutes',1],
+  'playlist adds':['Ajouts en playlist',1],
+  saves:['Sauvegardes',1],
+  followers:['Abonnés',0]
+};
+const dayMs = 86400000;
+function spotifyRows(csv) {
+  const lines = csv.trim().split(/\r?\n/).filter(line => line.trim());
+  const fields = line => line.split(',').map(s => s.trim().replace(/^"|"$/g,''));
+  const headers = fields(lines.shift() || '').map(s => s.toLowerCase());
+  const dateIndex = headers.indexOf('date');
+  const columns = Object.entries(spotifyColumns).filter(([key]) => headers.includes(key));
+  if (dateIndex < 0 || !columns.length || !lines.length) throw new Error('Format CSV Audience non reconnu.');
+  const records = new Map();
+  for (const [index,line] of lines.entries()) {
+    const values = fields(line);
+    if (values.length !== headers.length) throw new Error('Nombre de colonnes inattendu à la ligne ' + (index + 2) + '.');
+    for (const [column,[metric,days]] of columns) {
+      const value = values[headers.indexOf(column)];
+      if (value === '') continue;
+      const row = {platform:'Spotify',metric,date:values[dateIndex],days,value:Number(value)};
+      if (!/^\d+$/.test(value) || !Number.isSafeInteger(row.value) || !valid(row)) {
+        throw new Error('Date ou valeur invalide à la ligne ' + (index + 2) + '.');
+      }
+      records.set(rowKey(row),row);
+    }
+  }
+  if (!records.size) throw new Error('Le fichier ne contient aucun relevé exploitable.');
+  return [...records.values()];
+}
+function spotifyTotals(daily) {
+  const totals = [];
+  for (const metric of ['Écoutes','Sauvegardes','Ajouts en playlist']) {
+    const series = daily.filter(r => r.platform === 'Spotify' && r.days === 1 && r.metric === metric)
+      .sort((a,b) => a.date.localeCompare(b.date));
+    let sum = 0;
+    for (const [index,row] of series.entries()) {
+      sum += row.value;
+      if (index >= 28) sum -= series[index-28].value;
+      if (index >= 27 && Date.parse(row.date)-Date.parse(series[index-27].date) === 27*dayMs) {
+        totals.push({...row,days:28,value:sum});
+      }
+    }
+  }
+  return totals;
+}
+byId('spotify-csv').addEventListener('change',async event => {
+  const input = event.currentTarget;
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const rows = spotifyRows(await file.text());
+    save(rows);
+    const preferred = records().find(r => r.platform === 'Spotify' && r.metric === 'Écoutes' && r.days === 28) || rows[0];
+    render(seriesKey(preferred));
+    status.textContent = rows.length.toLocaleString('fr-FR') + ' relevés Spotify lus. ' + status.textContent;
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    input.value = '';
   }
 });
 render();
