@@ -118,6 +118,31 @@
 <p><strong>À tester.</strong> Associez Carnyx à The Fallen dans une playlist du groupe, puis relevez les écoutes et les Shazams de ces titres sur deux fenêtres de quatre semaines. Les cumuls du catalogue couvrent des titres sortis à des dates différentes.</p>
 <p><small>Source · Export par morceau Apple Music for Artists. Les moyennes d’auditeurs par morceau ne sont pas additionnées.</small></p>
 </section>
+<section class="panel" style="margin-top:1rem" aria-labelledby="bandcamp-summary">
+<h2 id="bandcamp-summary">Bandcamp sur 60 jours</h2>
+<p>Du 24 septembre au 22 novembre 2026 · UTC</p>
+<p><strong>187 écoutes</strong> · <strong>11 achats</strong> · <strong>6 téléchargements</strong></p>
+<p>Bandcamp compte 91 écoutes au-delà de 90 % du morceau, 75 écoutes partielles et 21 arrêts avant 10 %. Les 187 écoutes ont eu lieu sur Bandcamp.</p>
+<details><summary>Les dix titres les plus écoutés</summary>
+<div class="table"><table><thead><tr><th scope="col">Titre</th><th scope="col">Écoutes</th></tr></thead><tbody><tr><th scope="row">Carnyx</th><td>91</td></tr>
+<tr><th scope="row">Cataclysm</th><td>26</td></tr>
+<tr><th scope="row">The Fallen</th><td>15</td></tr>
+<tr><th scope="row">Valhalla</th><td>11</td></tr>
+<tr><th scope="row">Dark Matter</th><td>11</td></tr>
+<tr><th scope="row">Chimera</th><td>11</td></tr>
+<tr><th scope="row">Omen</th><td>6</td></tr>
+<tr><th scope="row">Stranding</th><td>4</td></tr>
+<tr><th scope="row">Star Collapse</th><td>4</td></tr>
+<tr><th scope="row">Lawrence</th><td>4</td></tr></tbody></table></div>
+</details>
+<div class="table"><table><caption>Achats et téléchargements par sortie</caption><thead><tr><th scope="col">Sortie</th><th scope="col">Achats</th><th scope="col">Téléchargements</th></tr></thead><tbody><tr><th scope="row">Carnyx</th><td>6</td><td>4</td></tr>
+<tr><th scope="row">EP I</th><td>2</td><td>1</td></tr>
+<tr><th scope="row">Chasm</th><td>2</td><td>0</td></tr>
+<tr><th scope="row">Star Collapse (single)</th><td>1</td><td>1</td></tr></tbody></table></div>
+<p><strong>Carnyx</strong> représente 91 écoutes sur 187 (49 %) et 6 achats sur 11. Le catalogue antérieur représente les 5 autres achats.</p>
+<p><strong>À tester.</strong> Dans la prochaine publication qui renvoie vers Carnyx sur Bandcamp, proposez aussi Chasm. Suivez les écoutes de Cataclysm et les achats de Chasm sur les 60 jours suivants.</p>
+<p><small>Source · Captures Bandcamp Stats, onglets Plays et Sales. Une deuxième période comparable est nécessaire pour mesurer l’évolution.</small></p>
+</section>
 <div class="cards">
 <section class="panel" aria-labelledby="trend">
 <h2 id="trend">Évolution</h2>
@@ -1228,7 +1253,7 @@ const platforms = {
   Spotify:{metrics:['Auditeurs','Auditeurs mensuels','Auditeurs actifs mensuels','Super auditeurs','Écoutes','Sauvegardes','Ajouts en playlist','Abonnés'], advice:'Vérifiez si les écoutes viennent des playlists ou d’une recherche volontaire. Mesurez les sauvegardes et les ajouts en playlist après vos publications pour voir si les nouvelles écoutes se prolongent.'},
   YouTube:{metrics:['Vues','Heures de visionnage','Rétention moyenne (%)','Abonnés','Impressions','Taux de clics (%)'],advice:'Comparez les Shorts et les vidéos longues séparément. Si les impressions progressent sans hausse comparable des vues, testez un titre ou une miniature. Si la rétention baisse, examinez les premières secondes.'},
   Instagram:{metrics:['Comptes touchés','Spectateurs','Vues','Interactions','Comptes ayant interagi','Partages','Visites du profil','Clics sur le lien','Abonnés'],advice:'Comparez les partages et les visites de profil par compte touché sur des Reels comparables. Si la portée monte sans générer de visites, testez un appel à l’action qui donne une raison d’ouvrir le profil.'},
-  Bandcamp:{metrics:['Écoutes','Ventes','Abonnés'],advice:'Suivez les ventes lors d’une mise en avant du vinyle de Chasm et comparez-les à une période de durée identique.'},
+  Bandcamp:{metrics:['Écoutes','Ventes','Téléchargements','Abonnés'],advice:'Suivez les ventes lors d’une mise en avant du vinyle de Chasm et comparez-les à une période de durée identique.'},
   'Apple Music':{metrics:['Écoutes','Auditeurs','Shazams','Écoutes cumulées','Shazams cumulés'],advice:'Regardez si les villes où les Shazams augmentent sont aussi celles où les écoutes progressent.'},
   Facebook:{metrics:['Comptes touchés','Vues','Interactions','Clics sur le lien','Abonnés'],advice:'Comparez la portée et les clics pour les annonces de concert et les publications musicales.'},
   Bandsintown:{metrics:['Fans','Demandes de concert'],advice:'Croisez les demandes de concert par ville avec la géographie des écoutes avant de solliciter des salles.'}
@@ -1275,6 +1300,9 @@ for (const platform of Object.keys(platforms)) option(platformSelect,platform,pl
 platformSelect.addEventListener('change',updateMetrics);
 updateMetrics();
 let youtubeRecords = [];
+const bandcampRecords = [
+  ['Écoutes',187],['Ventes',11],['Téléchargements',6]
+].map(([metric,value]) => ({platform:'Bandcamp',metric,value,date:'2026-11-22',days:60,source:'Bandcamp Stats'}));
 const appleMusicRecords = [
   ['Écoutes cumulées',25502],
   ['Shazams cumulés',712]
@@ -1296,6 +1324,7 @@ function records() {
   deduped.set(rowKey(facebookViews),facebookViews);
   for (const row of instagramRecords) deduped.set(rowKey(row),row);
   for (const row of appleMusicRecords) deduped.set(rowKey(row),row);
+  for (const row of bandcampRecords) deduped.set(rowKey(row),row);
   for (const row of youtubeRecords) deduped.set(rowKey(row),row);
   for (const row of publishedSpotify) deduped.set(rowKey(row),{...row,source:'Spotify for Artists'});
   for (const row of local) deduped.set(rowKey(row),{...row,source:'Relevé local'});
