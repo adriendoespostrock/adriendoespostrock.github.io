@@ -7,7 +7,7 @@
 <title>Audience · When Waves Collide</title>
 <style>
 :root{color-scheme:dark;--bg:#0c1112;--panel:#151d1e;--line:#344342;--ink:#eff8f5;--muted:#afc4bf;--accent:#9cf4c6;font:100%/1.55 system-ui,sans-serif}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main,header,footer{width:min(1120px,calc(100% - 2rem));margin:auto}header,footer{padding:1.25rem 0}header{border-bottom:1px solid var(--line)}a{color:var(--accent)}h1,h2,h3,p{margin:0 0 .65rem}h1{font-size:clamp(2.4rem,7vw,5.25rem);letter-spacing:-.065em;line-height:1.03}h2{font-size:1.45rem}h3{font-size:1rem}.hero{padding:clamp(2.5rem,7vw,5rem) 0 2rem;background:radial-gradient(ellipse at top right,#203a32,transparent 63%)}.eyebrow{color:var(--accent);letter-spacing:.13em;font-size:.875rem;text-transform:uppercase}p,small{color:var(--muted)}.grid,.cards,.fields{display:grid;gap:1rem}.grid{grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}.cards{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);margin:1rem 0}.panel,.tile{background:var(--panel);border:1px solid var(--line);border-radius:1rem;padding:1.2rem}.tile b{font-size:2rem;display:block}.fields{grid-template-columns:repeat(3,minmax(0,1fr));margin:1rem 0}label{display:block;font-weight:600}input,select,button{font:inherit;border:1px solid var(--line);border-radius:.45rem;background:var(--bg);color:var(--ink);padding:.55rem;width:100%}button{width:auto;background:var(--accent);color:#10241a;font-weight:700;cursor:pointer}button.secondary{background:transparent;color:var(--accent)}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}summary{cursor:pointer;font-weight:700}.table{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{border-bottom:1px solid var(--line);padding:.5rem;white-space:nowrap}#history{margin:1rem 0}#status,#change{color:var(--accent)}.actions{display:flex;flex-wrap:wrap;gap:.6rem}footer{border-top:1px solid var(--line)}@media(max-width:720px){.cards,.fields{grid-template-columns:1fr}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink)}main,header,footer{width:min(1120px,calc(100% - 2rem));margin:auto}header,footer{padding:1.25rem 0}header{border-bottom:1px solid var(--line)}a{color:var(--accent)}h1,h2,h3,p{margin:0 0 .65rem}h1{font-size:clamp(2.4rem,7vw,5.25rem);letter-spacing:-.065em;line-height:1.03}h2{font-size:1.45rem}h3{font-size:1rem}.hero{padding:clamp(2.5rem,7vw,5rem) 0 2rem;background:radial-gradient(ellipse at top right,#203a32,transparent 63%)}.eyebrow{color:var(--accent);letter-spacing:.13em;font-size:.875rem;text-transform:uppercase}p,small{color:var(--muted)}.grid,.cards,.fields{display:grid;gap:1rem}.grid{grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}.cards{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);margin:1rem 0}.panel,.tile{background:var(--panel);border:1px solid var(--line);border-radius:1rem;padding:1.2rem}.tile b{font-size:2rem;display:block}.fields{grid-template-columns:repeat(3,minmax(0,1fr));margin:1rem 0}label{display:block;font-weight:600}input,select,button{font:inherit;border:1px solid var(--line);border-radius:.45rem;background:var(--bg);color:var(--ink);padding:.55rem;width:100%}button{width:auto;background:var(--accent);color:#10241a;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:default}button.secondary{background:transparent;color:var(--accent)}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}summary{cursor:pointer;font-weight:700}.table{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left}th,td{border-bottom:1px solid var(--line);padding:.5rem;white-space:nowrap}#history{margin:1rem 0}#status,#change{color:var(--accent)}.actions{display:flex;flex-wrap:wrap;gap:.6rem}footer{border-top:1px solid var(--line)}@media(max-width:720px){.cards,.fields{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -27,6 +27,21 @@
 <p id="spotify-period"></p>
 <div class="table"><table><thead><tr><th scope="col">Indicateur</th><th scope="col">Période précédente</th><th scope="col">Dernière période</th><th scope="col">Variation</th></tr></thead><tbody id="spotify-comparison"></tbody></table></div>
 <p><small>Source : export Audience de Spotify for Artists. Auditeurs mensuels et abonnés relevés en fin de période.</small></p>
+<details>
+<summary>Mettre à jour Spotify</summary>
+<ol>
+<li><a href="https://artists.spotify.com/" target="_blank" rel="noopener noreferrer">Ouvrir Spotify for Artists</a>, sélectionner When Waves Collide et télécharger le CSV de l’onglet Audience.</li>
+<li><label for="spotify-publish-file">Sélectionner le nouveau CSV pour le vérifier</label>
+<input id="spotify-publish-file" type="file" accept=".csv,text/csv"></li>
+<li>Copier le CSV vérifié, puis ouvrir GitHub. Dans l’éditeur, remplacer tout le contenu du fichier et choisir <strong>Commit changes</strong> sur la branche <strong>main</strong>. GitHub Pages publiera ensuite les nouveaux chiffres.</li>
+</ol>
+<div class="actions">
+<button type="button" id="spotify-copy" disabled>Copier le CSV vérifié</button>
+<a href="https://github.com/adriendoespostrock/adriendoespostrock.github.io/edit/main/data/spotify-audience.csv" target="_blank" rel="noopener noreferrer">Ouvrir le fichier dans GitHub</a>
+</div>
+<p id="spotify-publish-status" role="status"></p>
+</details>
+<p id="spotify-source-status" role="status" hidden></p>
 </section>
 <div class="cards">
 <section class="panel" aria-labelledby="trend">
@@ -1363,7 +1378,66 @@ byId('spotify-csv').addEventListener('change',async event => {
     input.value = '';
   }
 });
-const publishedSpotify = spotifyRows(byId('spotify-published').textContent);
+let publishedSpotify = spotifyRows(byId('spotify-published').textContent);
+let validatedCsv = '';
+const publishFile = byId('spotify-publish-file');
+const publishStatus = byId('spotify-publish-status');
+const copyButton = byId('spotify-copy');
+function validatePublication(csv) {
+  const headers = csv.trim().split(/\r?\n/,1)[0].split(',').map(s => s.trim().replace(/^"|"$/g,'').toLowerCase());
+  if (!Object.keys(spotifyColumns).every(key => headers.includes(key))) {
+    throw new Error('Choisis l’export Audience complet de Spotify for Artists.');
+  }
+  const rows = spotifyRows(csv);
+  const end = rows.reduce((latest,row) => row.date > latest ? row.date : latest,'');
+  const previousEnd = new Date(Date.parse(end) - 28 * dayMs).toISOString().slice(0,10);
+  const totals = spotifyTotals(rows);
+  for (const metric of ['Écoutes','Sauvegardes','Ajouts en playlist']) {
+    if (![end,previousEnd].every(date => totals.some(row => row.date === date && row.metric === metric))) {
+      throw new Error('L’export doit contenir les 56 derniers jours complets pour afficher la comparaison.');
+    }
+  }
+  return {rows,end};
+}
+publishFile.addEventListener('change',async () => {
+  const file = publishFile.files[0];
+  validatedCsv = '';
+  copyButton.disabled = true;
+  publishStatus.textContent = '';
+  if (!file) return;
+  try {
+    const csv = (await file.text()).trim() + '\n';
+    if (publishFile.files[0] !== file) return;
+    const {end} = validatePublication(csv);
+    const latestPublic = publishedSpotify.reduce((latest,row) => row.date > latest ? row.date : latest,'');
+    if (end < latestPublic) throw new Error('Ce fichier est plus ancien que les chiffres déjà publiés.');
+    validatedCsv = csv;
+    copyButton.disabled = false;
+    publishStatus.textContent = 'Fichier validé. Dernier jour disponible : ' + dateLabel(end) + '.';
+  } catch (error) {
+    if (publishFile.files[0] === file) publishStatus.textContent = error.message;
+  }
+});
+copyButton.addEventListener('click',async () => {
+  try {
+    await navigator.clipboard.writeText(validatedCsv);
+    publishStatus.textContent = 'CSV copié. Colle-le dans l’éditeur GitHub pour publier les nouveaux chiffres.';
+  } catch {
+    publishStatus.textContent = 'Copie automatique indisponible. Ouvre le CSV vérifié dans un éditeur de texte et copie son contenu.';
+  }
+});
+async function loadPublishedSpotify() {
+  try {
+    const response = await fetch('./data/spotify-audience.csv',{cache:'no-cache'});
+    if (!response.ok) throw new Error('CSV indisponible');
+    publishedSpotify = validatePublication(await response.text()).rows;
+    render();
+  } catch {
+    const message = byId('spotify-source-status');
+    message.textContent = 'Le fichier publié est indisponible ou invalide. Le tableau affiche l’export de secours daté du 21 novembre 2026.';
+    message.hidden = false;
+  }
+}
 function renderSpotifySummary(rows) {
   const body = byId('spotify-comparison');
   body.replaceChildren();
@@ -1392,6 +1466,7 @@ function renderSpotifySummary(rows) {
   }
 }
 render();
+loadPublishedSpotify();
 </script>
 </body>
 </html>
