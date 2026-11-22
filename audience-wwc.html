@@ -56,6 +56,29 @@
 <p id="youtube-insight"></p>
 <p><small>Les statistiques quotidiennes et par vidéo dépendent du rapport sélectionné dans YouTube Studio.</small></p>
 </section>
+<section class="panel" style="margin-top:1rem" aria-labelledby="instagram-summary">
+<h2 id="instagram-summary">Instagram sur 90 jours</h2>
+<p>Statistiques du compte @whenwavescollide · relevé du 22 novembre 2026</p>
+<p><strong>4 949 vues</strong> · <strong>1 378 spectateurs</strong> · <strong>343 interactions</strong> · <strong>2 465 abonnés</strong> au jour du relevé</p>
+<p>93 comptes ont interagi. Le profil a reçu 149 visites et 6 appuis sur les liens externes. Les non-abonnés représentent 34,7 % des vues et 10,8 % des interactions.</p>
+<div class="table"><table><caption>Répartition par format</caption><thead><tr><th scope="col">Format</th><th scope="col">Part des vues</th><th scope="col">Part des interactions</th></tr></thead><tbody>
+<tr><th scope="row">Reels</th><td>35,5 %</td><td>43,1 %</td></tr>
+<tr><th scope="row">Publications</th><td>34,2 %</td><td>27,4 %</td></tr>
+<tr><th scope="row">Stories</th><td>29,8 %</td><td>29,4 %</td></tr>
+<tr><th scope="row">Vidéos</th><td>0,6 %</td><td>—</td></tr>
+</tbody></table></div>
+<details><summary>Les cinq contenus les plus vus</summary>
+<div class="table"><table><thead><tr><th scope="col">Publication</th><th scope="col">Vues</th><th scope="col">Interactions</th></tr></thead><tbody>
+<tr><th scope="row">23 octobre</th><td>916</td><td>55</td></tr>
+<tr><th scope="row">29 octobre</th><td>710</td><td>48</td></tr>
+<tr><th scope="row">5 novembre</th><td>536</td><td>32</td></tr>
+<tr><th scope="row">19 novembre</th><td>415</td><td>31</td></tr>
+<tr><th scope="row">20 novembre</th><td>392</td><td>31</td></tr>
+</tbody></table></div>
+</details>
+<p><strong>À tester.</strong> Comparez un teaser dans l’esprit du Reel du 23 octobre et un extrait de répétition. Gardez le même appel à l’action vers Carnyx et relevez les visites du profil et les appuis sur le lien.</p>
+<p><small>Source · Tableau de bord professionnel Instagram, capture du 22 novembre 2026. Un deuxième relevé de même durée est nécessaire pour comparer les périodes.</small></p>
+</section>
 <div class="cards">
 <section class="panel" aria-labelledby="trend">
 <h2 id="trend">Évolution</h2>
@@ -1165,7 +1188,7 @@
 const platforms = {
   Spotify:{metrics:['Auditeurs','Auditeurs mensuels','Auditeurs actifs mensuels','Super auditeurs','Écoutes','Sauvegardes','Ajouts en playlist','Abonnés'], advice:'Vérifiez si les écoutes viennent des playlists ou d’une recherche volontaire. Mesurez les sauvegardes et les ajouts en playlist après vos publications pour voir si les nouvelles écoutes se prolongent.'},
   YouTube:{metrics:['Vues','Heures de visionnage','Rétention moyenne (%)','Abonnés','Impressions','Taux de clics (%)'],advice:'Comparez les Shorts et les vidéos longues séparément. Si les impressions progressent sans hausse comparable des vues, testez un titre ou une miniature. Si la rétention baisse, examinez les premières secondes.'},
-  Instagram:{metrics:['Comptes touchés','Vues','Interactions','Partages','Visites du profil','Clics sur le lien','Abonnés'],advice:'Comparez les partages et les visites de profil par compte touché sur des Reels comparables. Si la portée monte sans générer de visites, testez un appel à l’action qui donne une raison d’ouvrir le profil.'},
+  Instagram:{metrics:['Comptes touchés','Spectateurs','Vues','Interactions','Comptes ayant interagi','Partages','Visites du profil','Clics sur le lien','Abonnés'],advice:'Comparez les partages et les visites de profil par compte touché sur des Reels comparables. Si la portée monte sans générer de visites, testez un appel à l’action qui donne une raison d’ouvrir le profil.'},
   Bandcamp:{metrics:['Écoutes','Ventes','Abonnés'],advice:'Suivez les ventes lors d’une mise en avant du vinyle de Chasm et comparez-les à une période de durée identique.'},
   'Apple Music':{metrics:['Écoutes','Auditeurs','Shazams'],advice:'Regardez si les villes où les Shazams augmentent sont aussi celles où les écoutes progressent.'},
   Facebook:{metrics:['Comptes touchés','Interactions','Clics sur le lien','Abonnés'],advice:'Comparez la portée et les clics pour les annonces de concert et les publications musicales.'},
@@ -1213,8 +1236,18 @@ for (const platform of Object.keys(platforms)) option(platformSelect,platform,pl
 platformSelect.addEventListener('change',updateMetrics);
 updateMetrics();
 let youtubeRecords = [];
+const instagramRecords = [
+  ['Vues',90,4949],
+  ['Spectateurs',90,1378],
+  ['Interactions',90,343],
+  ['Comptes ayant interagi',90,93],
+  ['Visites du profil',90,149],
+  ['Clics sur le lien',90,6],
+  ['Abonnés',0,2465]
+].map(([metric,days,value]) => ({platform:'Instagram',metric,days,value,date:'2026-11-22',source:'Tableau de bord Instagram'}));
 function records() {
   const deduped = new Map([[rowKey(publicRecord),publicRecord]]);
+  for (const row of instagramRecords) deduped.set(rowKey(row),row);
   for (const row of youtubeRecords) deduped.set(rowKey(row),row);
   for (const row of publishedSpotify) deduped.set(rowKey(row),{...row,source:'Spotify for Artists'});
   for (const row of local) deduped.set(rowKey(row),{...row,source:'Relevé local'});
