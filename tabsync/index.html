@@ -20,6 +20,7 @@
 <section>
 <h2>Export pour Resolve</h2>
 <div class="row"><label>Cadence <select id="fps"><option>23.976</option><option>24</option><option selected>25</option><option>29.97</option><option>30</option><option>50</option><option>59.94</option><option>60</option></select></label>
+<label>Format <select id="format"><option value="landscape">Horizontal 16:9</option><option value="portrait">Vertical 9:16 (TikTok)</option><option value="custom">Personnalisé</option></select></label>
 <label>Largeur <input id="width" type="number" min="320" max="7680" value="1920"></label>
 <label>Hauteur <input id="height" type="number" min="180" max="4320" value="1080"></label></div>
 <div class="row"><button class="primary" id="export">Préparer la vidéo transparente</button><button id="cancel" hidden>Annuler</button><a id="download" hidden style="color:#8de7c3">Télécharger le MOV</a></div>
@@ -399,8 +400,8 @@ function drawLane(ctx,lane,bar,progress,w,h,top,height,multiple) {
   const left=w*.042, right=w*.958, lineStart=w*.132, lineEnd=w*.929;
   const at = fraction => top+height*fraction;
   const stringGap = height*.46/(lane.stringCount-1);
-  const fretSize = Math.min(h*.021,stringGap*1.24);
-  const labelSize = Math.min(h*.021,height*.135);
+  const fretSize = Math.min(h*.021,w*.030,stringGap*1.24);
+  const labelSize = Math.min(h*.021,w*.034,height*.135);
   const y = string => at(.23)+string*stringGap;
   const x = fraction => lineStart+w*.010+fraction*(lineEnd-lineStart-w*.022);
   ctx.fillStyle='rgba(12,17,25,.9)';
@@ -419,7 +420,7 @@ function drawLane(ctx,lane,bar,progress,w,h,top,height,multiple) {
   ctx.textAlign='right';
   ctx.font='600 '+fretSize*.92+'px system-ui';
   lane.strings.forEach((name,string) => ctx.fillText(name,lineStart-w*.01,y(string)));
-  const meterSize = Math.min(h*.024,height*.158);
+  const meterSize = Math.min(h*.024,w*.034,height*.158);
   ctx.textAlign='center';
   ctx.font='700 '+meterSize+'px system-ui';
   ctx.fillText(String(bar.numerator),w*.072,at(.46)-meterSize*.52);
@@ -446,8 +447,11 @@ function refresh() {
 function refreshDimensions() {
   const width = Number(el('width').value), height = Number(el('height').value);
   if (width>0 && height>0 && el('width').checkValidity() && el('height').checkValidity()) {
-    preview.height = Math.max(1,Math.round(960*height/width));
-    el('stage').style.aspectRatio = width+'/'+height;
+    preview.width = Math.max(1,Math.min(960,Math.round(960*width/height)));
+    preview.height = Math.max(1,Math.round(preview.width*height/width));
+    const stage = el('stage');
+    stage.style.aspectRatio = width+'/'+height;
+    stage.style.width = height>width ? 'min(100%, '+(70*width/height)+'vh)' : '';
   }
   refresh();
 }
@@ -475,7 +479,18 @@ function step(direction) { if (Number.isFinite(video.duration)) {video.pause();v
 el('back').onclick = () => step(-1);
 el('forward').onclick = () => step(1);
 trackFields.forEach(field => { field.onchange = chooseTrack; });
-el('width').oninput = el('height').oninput = refreshDimensions;
+el('format').onchange = () => {
+  const format = el('format').value;
+  if (format==='custom') return;
+  const portrait = format==='portrait';
+  el('width').value = portrait ? 1080 : 1920;
+  el('height').value = portrait ? 1920 : 1080;
+  refreshDimensions();
+};
+el('width').oninput = el('height').oninput = () => {
+  el('format').value = 'custom';
+  refreshDimensions();
+};
 el('anchor').onclick = () => {
   const index = Number(el('measure').value);
   if (!Number.isInteger(index) || index<0 || index>=bars.length) {el('syncStatus').textContent='Numéro de mesure invalide.';return;}
