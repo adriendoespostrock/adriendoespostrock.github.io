@@ -79,6 +79,20 @@
 <p><strong>À tester.</strong> Comparez un teaser dans l’esprit du Reel du 23 octobre et un extrait de répétition. Gardez le même appel à l’action vers Carnyx et relevez les visites du profil et les appuis sur le lien.</p>
 <p><small>Source · Tableau de bord professionnel Instagram, capture du 22 novembre 2026. Un deuxième relevé de même durée est nécessaire pour comparer les périodes.</small></p>
 </section>
+<section class="panel" style="margin-top:1rem" aria-labelledby="facebook-summary">
+<h2 id="facebook-summary">Facebook</h2>
+<p><strong>3 865 vues (+239 %)</strong> du 25 octobre au 21 novembre 2026, selon le tableau de bord Creator. Sur la même période, 48,7 % des vues proviennent de non-abonnés.</p>
+<h3>Publications du 24 août au 22 novembre 2026</h3>
+<p>L’export recense 9 contenus, pour <strong>3 766 vues et 163 interactions</strong> cumulées sur ces contenus. Le filtre porte sur la date de publication et les compteurs sont indiqués comme « Global ».</p>
+<div class="table"><table><caption>Résultats des contenus exportés par format</caption><thead><tr><th scope="col">Format</th><th scope="col">Contenus</th><th scope="col">Vues</th><th scope="col">Interactions</th></tr></thead><tbody>
+<tr><th scope="row">Photos</th><td>3</td><td>1 707</td><td>79</td></tr>
+<tr><th scope="row">Reels</th><td>5</td><td>1 372</td><td>52</td></tr>
+<tr><th scope="row">Lien</th><td>1</td><td>687</td><td>32</td></tr>
+</tbody></table></div>
+<p>La photo du 29 octobre annonçant la sortie de Carnyx arrive en tête avec <strong>1 165 vues</strong>. L’annonce de sortie du 30 octobre compte <strong>9 partages</strong>, le maximum dans l’export.</p>
+<p><strong>À tester.</strong> Pour la prochaine sortie, comparez une annonce photo la veille et une publication avec le lien le jour J. Mesurez les clics sortants et les partages de chaque publication.</p>
+<p><small>Sources · Tableau de bord Creator et export Bibliothèque de contenu Facebook. Les vues de la Page sur 28 jours et les compteurs par publication couvrent des périmètres différents.</small></p>
+</section>
 <div class="cards">
 <section class="panel" aria-labelledby="trend">
 <h2 id="trend">Évolution</h2>
@@ -1191,7 +1205,7 @@ const platforms = {
   Instagram:{metrics:['Comptes touchés','Spectateurs','Vues','Interactions','Comptes ayant interagi','Partages','Visites du profil','Clics sur le lien','Abonnés'],advice:'Comparez les partages et les visites de profil par compte touché sur des Reels comparables. Si la portée monte sans générer de visites, testez un appel à l’action qui donne une raison d’ouvrir le profil.'},
   Bandcamp:{metrics:['Écoutes','Ventes','Abonnés'],advice:'Suivez les ventes lors d’une mise en avant du vinyle de Chasm et comparez-les à une période de durée identique.'},
   'Apple Music':{metrics:['Écoutes','Auditeurs','Shazams'],advice:'Regardez si les villes où les Shazams augmentent sont aussi celles où les écoutes progressent.'},
-  Facebook:{metrics:['Comptes touchés','Interactions','Clics sur le lien','Abonnés'],advice:'Comparez la portée et les clics pour les annonces de concert et les publications musicales.'},
+  Facebook:{metrics:['Comptes touchés','Vues','Interactions','Clics sur le lien','Abonnés'],advice:'Comparez la portée et les clics pour les annonces de concert et les publications musicales.'},
   Bandsintown:{metrics:['Fans','Demandes de concert'],advice:'Croisez les demandes de concert par ville avec la géographie des écoutes avant de solliciter des salles.'}
 };
 const publicRecord = {platform:'Bandsintown',metric:'Fans',date:'2026-11-22',days:0,value:364,source:'Public'};
@@ -1236,6 +1250,9 @@ for (const platform of Object.keys(platforms)) option(platformSelect,platform,pl
 platformSelect.addEventListener('change',updateMetrics);
 updateMetrics();
 let youtubeRecords = [];
+const facebookViews = {
+  platform:'Facebook',metric:'Vues',date:'2026-11-21',days:28,value:3865,source:'Tableau de bord Creator'
+};
 const instagramRecords = [
   ['Vues',90,4949],
   ['Spectateurs',90,1378],
@@ -1247,6 +1264,7 @@ const instagramRecords = [
 ].map(([metric,days,value]) => ({platform:'Instagram',metric,days,value,date:'2026-11-22',source:'Tableau de bord Instagram'}));
 function records() {
   const deduped = new Map([[rowKey(publicRecord),publicRecord]]);
+  deduped.set(rowKey(facebookViews),facebookViews);
   for (const row of instagramRecords) deduped.set(rowKey(row),row);
   for (const row of youtubeRecords) deduped.set(rowKey(row),row);
   for (const row of publishedSpotify) deduped.set(rowKey(row),{...row,source:'Spotify for Artists'});
